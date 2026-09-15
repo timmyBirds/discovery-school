@@ -17,12 +17,12 @@ random.seed(7)
 BARK = "#4a3222"
 # value: (leaf shades, label colour, cluster centre, radius, label position, anchor)
 VALUES = {
-    "Excellence":  (["#b5306b", "#c94a83", "#9c2359"], "#9c2359", (200, 210), 82, (92, 122), "middle"),
-    "Citizenship": (["#e8891d", "#f2a23d", "#c96f0f"], "#b84f0c", (305, 150), 78, (280, 56), "middle"),
-    "Integrity":   (["#5b4fa8", "#7468bd", "#483d92"], "#4a3f95", (425, 160), 78, (462, 66), "middle"),
-    "Discipline":  (["#2f6fb8", "#4a86c9", "#24579a"], "#24579a", (505, 260), 80, (608, 196), "middle"),
-    "Wisdom":      (["#7c9a2e", "#93b043", "#5f7a20"], "#5a7020", (470, 362), 70, (606, 404), "middle"),
-    "Ingenuity":   (["#2a9d8f", "#43b3a5", "#1e7a6f"], "#1e7a6f", (200, 342), 76, (84, 404), "middle"),
+    "Excellence":  (["#b5306b", "#c94a83", "#9c2359"], "#9c2359", (200, 210), 82, (80, 104), "middle"),
+    "Citizenship": (["#e8891d", "#f2a23d", "#c96f0f"], "#b84f0c", (305, 150), 78, (262, 44), "middle"),
+    "Integrity":   (["#5b4fa8", "#7468bd", "#483d92"], "#4a3f95", (425, 160), 78, (484, 52), "middle"),
+    "Discipline":  (["#2f6fb8", "#4a86c9", "#24579a"], "#24579a", (505, 260), 80, (632, 182), "middle"),
+    "Wisdom":      (["#7c9a2e", "#93b043", "#5f7a20"], "#5a7020", (470, 362), 70, (626, 414), "middle"),
+    "Ingenuity":   (["#2a9d8f", "#43b3a5", "#1e7a6f"], "#1e7a6f", (210, 342), 76, (80, 440), "middle"),
 }
 TRUNK_TOP = (352, 352)
 
@@ -53,11 +53,9 @@ def branch(to, width):
 
 
 parts = [
-    '<svg viewBox="0 0 700 680" role="img" aria-labelledby="tree-title tree-desc">',
-    '<title id="tree-title">The Discovery School values tree</title>',
-    '<desc id="tree-desc">A tree with exposed roots labelled Rooted in Christ, and a colourful canopy '
-    'carrying the six core values: citizenship, discipline, excellence, ingenuity, integrity and wisdom. '
-    'Beside the trunk: Ready for Tomorrow.</desc>',
+    '<svg viewBox="0 0 720 680" role="img" aria-label="The Discovery School values tree: a tree with '
+    'exposed roots labelled Rooted in Christ and a colourful canopy carrying the six core values — '
+    'citizenship, discipline, excellence, ingenuity, integrity and wisdom. Beside the trunk: Ready for Tomorrow.">',
     '<defs><path id="lf" d="M0 -16 C7 -10 8 4 0 16 C-8 4 -7 -10 0 -16 Z"/></defs>',
     # roots
     f'<g stroke="{BARK}" fill="none" stroke-linecap="round">',
@@ -85,17 +83,20 @@ for name, (_, _, centre, _, _, _) in VALUES.items():
     parts.append(branch(centre, 9))
 parts.append(branch((350, 262), 10))
 
-# leaves: a mixed centre cluster first, then each value cluster on top
+# leaves: a mixed centre cluster first, then each value cluster (leaves + label) on top.
+# Each value is one <g data-value> so the page can highlight it together with its
+# description in the list/cards (see site.js).
 mixed = [s[0] for s, *_ in VALUES.values()]
+parts.append('<g class="tree__mixed">')
 parts += cluster(352, 262, 92, mixed, 70)
-for name, (shades, _, (cx, cy), r, _, _) in VALUES.items():
-    parts += cluster(cx, cy, r, shades, 72)
-
-# labels
-parts.append('<g font-family="Nunito, Segoe UI, Helvetica, Arial, sans-serif" font-weight="800" font-size="19" letter-spacing="1.5">')
-for name, (_, colour, _, _, (lx, ly), anchor) in VALUES.items():
-    parts.append(f'<text x="{lx}" y="{ly}" fill="{colour}" text-anchor="{anchor}">{name.upper()}</text>')
 parts.append('</g>')
+for name, (shades, colour, (cx, cy), r, (lx, ly), anchor) in VALUES.items():
+    parts.append(f'<g class="tree__value" data-value="{name.lower()}" tabindex="0" role="button" aria-label="{name}">')
+    parts += cluster(cx, cy, r, shades, 72)
+    parts.append(f'<text class="tree__label" x="{lx}" y="{ly}" fill="{colour}" text-anchor="{anchor}" '
+                 'font-family="Nunito, Segoe UI, Helvetica, Arial, sans-serif" font-weight="800" font-size="19" letter-spacing="1.5" '
+                 f'stroke="#fff" stroke-width="7" stroke-linejoin="round" paint-order="stroke">{name.upper()}</text>')
+    parts.append('</g>')
 parts.append(f'<g font-family="Fraunces, Georgia, serif" font-weight="700" fill="{BARK}" text-anchor="middle">')
 parts.append('<text x="515" y="468" font-size="30" letter-spacing="2">READY <tspan font-size="18">FOR</tspan></text>')
 parts.append('<text x="515" y="502" font-size="30" letter-spacing="2">TOMORROW</text>')

@@ -312,13 +312,31 @@ strong { font-weight: 700; }
    Values tree (inline SVG)
    -------------------------------------------------------------------------- */
 .tree { width: min(640px, 100%); margin-inline: auto; }
-.tree svg { width: 100%; height: auto; }
+.tree svg { width: 100%; height: auto; overflow: visible; }
+/* hover/focus/tap a value on the tree or in the list: both light up, the rest dim */
+.tree__value { cursor: pointer; outline: none; transition: opacity 0.25s ease; }
+.tree__mixed { transition: opacity 0.25s ease; }
+.tree__label { transition: font-size 0.2s ease; }
+.tree.has-active .tree__value:not(.is-active), .tree.has-active .tree__mixed { opacity: 0.18; }
+.tree__value.is-active .tree__label, .tree__value:focus-visible .tree__label { font-size: 23px; }
+.tree__value:focus-visible .tree__label { text-decoration: underline; }
 .values-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
 .values-list li { display: grid; grid-template-columns: 14px 1fr; column-gap: 0.75rem; align-items: start; }
 .values-list li::before { content: ""; grid-row: 1 / span 2; width: 14px; height: 14px; border-radius: 50%; margin-top: 0.45rem; background: var(--dot, var(--orange)); }
 .values-list b, .values-list span { grid-column: 2; }
+.values-list li { padding: 0.45rem 0.6rem; margin: 0 -0.6rem; border-radius: var(--radius-sm); cursor: default; transition: background-color 0.2s ease, opacity 0.25s ease, transform 0.2s ease; }
+.values-list li::before { transition: transform 0.2s ease; }
 .values-list b { display: block; color: var(--blue-ink); }
 .values-list span { color: var(--muted); font-size: 0.95rem; }
+.values-group.has-active > :not(.is-active) { opacity: 0.4; }
+.values-list li.is-active { background: var(--sand); transform: translateX(4px); }
+.values-list li.is-active::before { transform: scale(1.5); }
+.values-list li:focus-visible { outline: 3px solid var(--orange); }
+.tree-caption { min-height: 4.5rem; max-width: 640px; margin: 0.5rem auto 2.5rem; text-align: center; color: var(--muted); transition: color 0.2s ease; }
+.tree-caption b { display: block; font-family: var(--font-head); font-size: 1.4rem; color: var(--value-colour, var(--blue-ink)); margin-bottom: 0.15rem; }
+.tree-caption__hint { font-size: 0.95rem; }
+.value-card { transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.25s ease; }
+.value-card.is-active { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
 
 /* --------------------------------------------------------------------------
    Photo band

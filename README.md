@@ -13,6 +13,7 @@ src/
   assets/          original photos, logo, seal, favicon (never served directly)
 tools/images.py    turns src/assets photos into resized WebP + JPEG, strips EXIF/GPS
 tools/tree.py      generates the values-tree SVG (src/partials/tree.svg)
+tools/requirements_docx.js  builds docs/requirements-map.docx from docs/requirements-map.md (needs `npm i docx`)
 build.py           assembles dist/ from src/
 dist/              the built site — do not edit by hand, it is overwritten by build.py
 ```

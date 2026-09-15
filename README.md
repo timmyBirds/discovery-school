@@ -17,6 +17,10 @@ build.py           assembles dist/ from src/
 dist/              the built site — do not edit by hand, it is overwritten by build.py
 ```
 
+## Hosting
+
+The site is published free on GitHub Pages by `.github/workflows/pages.yml`: every push to `main` deploys `dist/`. One-time setup on GitHub: **Settings → Pages → Source: GitHub Actions**. The site then lives at `https://timmybirds.github.io/discovery-school/` (a custom domain such as discoveryschoolburundi.org can be added on the same settings page).
+
 ## Editing
 
 1. Change a page in `src/pages/` (or the header/footer in `src/layout.html`, or styles in `src/site.css`).

@@ -42,4 +42,5 @@ for asset in ["site.css", "site.js"]:
     shutil.copy(SRC / asset, DIST / asset)
 (DIST / "assets").mkdir(exist_ok=True)
 shutil.copy(SRC / "assets" / "favicon.svg", DIST / "assets" / "favicon.svg")
+(DIST / ".nojekyll").touch()   # tell GitHub Pages to serve dist/ as-is
 print("copied site.css, site.js, favicon.svg")

@@ -1,0 +1,40 @@
+title: Staff Page | Discovery School Burundi
+description: Password-protected page for Discovery School staff — staff event photos, teaching resources and Google Classroom.
+---
+    <section class="page-hero page-hero--plain">
+      <div class="shell">
+        <div>
+          <p class="eyebrow">For staff</p>
+          <h1>Staff page.</h1>
+          <p class="lead">Staff-event photos, teaching resources and Google Classroom, behind the general staff password.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="shell">
+        <div class="staff-gate card">
+          <h2 style="font-size:1.5rem">Coming soon</h2>
+          <p>The staff page is being set up. It will hold:</p>
+          <ul style="padding-left:1.2rem">
+            <li>photos from staff events,</li>
+            <li>teaching resources and shared documents,</li>
+            <li>a direct link to <a href="https://classroom.google.com" rel="noopener">Google Classroom</a>.</li>
+          </ul>
+          <p class="mb-0">Until then, staff can reach Google Classroom directly and find shared documents through the office.</p>
+          <a class="btn btn--secondary" href="https://classroom.google.com" rel="noopener" style="margin-top:1rem">Open Google Classroom</a>
+        </div>
+
+        <!--
+          PLACEHOLDER — requirements for this page are still being gathered.
+          The brief calls for one general password shared by all staff. On a static site that
+          means a client-side check (the password hash lives in JavaScript), which keeps the page
+          out of parents' way but is NOT real security. Confirm with the school what will be
+          stored here before choosing the approach:
+            - photos, worksheets, links  -> client-side password is fine
+            - anything sensitive         -> needs a real login (Google Drive / Sites, or a host with
+                                            basic auth, e.g. Netlify/Cloudflare Access)
+        -->
+        <p class="todo" style="max-width:560px;margin:1.5rem auto 0">Staff page requirements to confirm: what content lives here, who maintains it, and whether a shared client-side password is acceptable for that content.</p>
+      </div>
+    </section>

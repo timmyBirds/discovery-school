@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build optimised web images from src/assets into dist/assets/img.
 
-- Photos: resized to several widths, EXIF (incl. GPS) stripped, saved as WebP + JPEG fallback.
+- Photos: resized to several widths, EXIF (incl. GPS) stripped, saved as WebP with one JPEG fallback.
 - Logo: white matte removed with soft alpha, saved as transparent PNG.
 - NAPS seal: clipped to its ring so the square white backing does not show.
 
@@ -16,7 +16,8 @@ SRC = ROOT / "src" / "assets"
 OUT = ROOT / "dist" / "assets" / "img"
 OUT.mkdir(parents=True, exist_ok=True)
 
-WIDTHS = [1800, 1200, 800, 480]
+WIDTHS = [1600, 1200, 800, 480]
+JPEG_FALLBACK = 1200          # one JPEG per photo for the few browsers without WebP
 PHOTOS = {
     # name: source file in src/assets. Each is emitted at every width in WIDTHS that is
     # not larger than the source, plus the source's own width if it is smaller than 1800.
@@ -38,13 +39,16 @@ def photo(name, source):
     widths = [w for w in WIDTHS if w <= im.width]
     if im.width < WIDTHS[0] and im.width not in widths:
         widths.insert(0, im.width)
+    fallback = min(widths, key=lambda w: abs(w - JPEG_FALLBACK))
     for w in widths:
         h = round(im.height * w / im.width)
         r = im.resize((w, h), Image.LANCZOS)
-        r.save(OUT / f"{name}-{w}.webp", "WEBP", quality=78, method=6)
-        r.save(OUT / f"{name}-{w}.jpg", "JPEG", quality=80, optimize=True, progressive=True)
-        print(f"{name}-{w}: webp {(OUT / f'{name}-{w}.webp').stat().st_size // 1024} KB, "
-              f"jpg {(OUT / f'{name}-{w}.jpg').stat().st_size // 1024} KB")
+        r.save(OUT / f"{name}-{w}.webp", "WEBP", quality=72, method=6)
+        line = f"{name}-{w}: webp {(OUT / f'{name}-{w}.webp').stat().st_size // 1024} KB"
+        if w == fallback:
+            r.save(OUT / f"{name}-{w}.jpg", "JPEG", quality=78, optimize=True, progressive=True)
+            line += f", jpg {(OUT / f'{name}-{w}.jpg').stat().st_size // 1024} KB"
+        print(line)
 
 
 def unmatte(source, dest, max_w, knee=60):

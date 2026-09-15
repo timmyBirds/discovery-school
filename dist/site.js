@@ -68,3 +68,57 @@
     if (pinned && !e.target.closest('[data-value]')) { pinned = null; setActive(null); }
   });
 })();
+
+// Photo strip: prev/next buttons and arrow keys scroll one card at a time (no auto-play).
+(function () {
+  var strip = document.querySelector('.strip');
+  if (!strip) return;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function step(dir) {
+    var card = strip.querySelector('figure');
+    var by = card ? card.getBoundingClientRect().width + 16 : strip.clientWidth * 0.8;
+    strip.scrollBy({ left: dir * by, behavior: reduce ? 'auto' : 'smooth' });
+  }
+  var prev = document.querySelector('[data-strip-prev]'), next = document.querySelector('[data-strip-next]');
+  if (prev) prev.addEventListener('click', function () { step(-1); });
+  if (next) next.addEventListener('click', function () { step(1); });
+  strip.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+  });
+})();
+
+// Lightbox: any .gallery__link opens its photo in the <dialog>; arrows move between photos.
+(function () {
+  var box = document.getElementById('lightbox');
+  var links = Array.prototype.slice.call(document.querySelectorAll('.gallery__link'));
+  if (!box || !links.length || typeof box.showModal !== 'function') return;
+  var img = box.querySelector('img'), cap = box.querySelector('figcaption'), current = 0;
+
+  function show(i) {
+    current = (i + links.length) % links.length;
+    var link = links[current];
+    var fig = link.closest('figure');
+    img.src = link.dataset.full || link.href;
+    img.alt = link.querySelector('img').alt;
+    cap.textContent = fig && fig.querySelector('figcaption') ? fig.querySelector('figcaption').textContent : '';
+  }
+  links.forEach(function (link, i) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      show(i);
+      box.showModal();
+    });
+  });
+  box.querySelector('.lightbox__close').addEventListener('click', function () { box.close(); });
+  box.querySelector('.lightbox__prev').addEventListener('click', function () { show(current - 1); });
+  box.querySelector('.lightbox__next').addEventListener('click', function () { show(current + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (!box.open) return;
+    if (e.key === 'ArrowRight') show(current + 1);
+    if (e.key === 'ArrowLeft') show(current - 1);
+    if (e.key === 'Escape') box.close();
+  });
+  box.addEventListener('click', function (e) { if (e.target === box) box.close(); });  // backdrop click
+  box.addEventListener('close', function () { img.removeAttribute('src'); links[current].focus(); });
+})();

@@ -64,9 +64,9 @@
           </ul>
         </div>
         <figure class="photo">
-          <picture>
+<picture>
             <source type="image/webp" srcset="assets/img/staff-480.webp 480w, assets/img/staff-800.webp 800w, assets/img/staff-1080.webp 1080w" sizes="(max-width: 800px) 100vw, 45vw">
-            <img src="assets/img/staff-1080.jpg" srcset="assets/img/staff-480.jpg 480w, assets/img/staff-800.jpg 800w, assets/img/staff-1080.jpg 1080w" sizes="(max-width: 800px) 100vw, 45vw" width="1080" height="665" alt="Discovery School teachers and staff gathered in front of the school" fetchpriority="high">
+            <img src="assets/img/staff-1080.jpg" sizes="(max-width: 800px) 100vw, 45vw" width="1080" height="665" alt="Discovery School teachers and staff gathered in front of the school" fetchpriority="high">
           </picture>
         </figure>
       </div>
@@ -107,10 +107,10 @@
         </div>
         <div>
           <figure class="photo" style="margin-bottom:1.25rem">
-            <picture>
-            <source type="image/webp" srcset="assets/img/training-480.webp 480w, assets/img/training-800.webp 800w, assets/img/training-1080.webp 1080w" sizes="(max-width: 800px) 100vw, 45vw">
-            <img src="assets/img/training-1080.jpg" srcset="assets/img/training-480.jpg 480w, assets/img/training-800.jpg 800w, assets/img/training-1080.jpg 1080w" sizes="(max-width: 800px) 100vw, 45vw" width="1080" height="648" alt="A teacher leading a training session at a flip chart" loading="lazy">
-          </picture>
+<picture>
+              <source type="image/webp" srcset="assets/img/training-480.webp 480w, assets/img/training-800.webp 800w, assets/img/training-1080.webp 1080w" sizes="(max-width: 800px) 100vw, 45vw">
+              <img src="assets/img/training-1080.jpg" sizes="(max-width: 800px) 100vw, 45vw" width="1080" height="648" alt="A teacher leading a training session at a flip chart" loading="lazy">
+            </picture>
             <figcaption>On-the-job teacher training</figcaption>
           </figure>
           <div class="card">
@@ -209,6 +209,13 @@
       </div>
     </div>
   </footer>
+
+  <dialog class="lightbox" id="lightbox" aria-label="Photo">
+    <button class="lightbox__btn lightbox__close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button class="lightbox__btn lightbox__prev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <figure><img alt=""><figcaption></figcaption></figure>
+    <button class="lightbox__btn lightbox__next" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+  </dialog>
 
   <script src="site.js" defer></script>
 </body>

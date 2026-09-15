@@ -16,20 +16,29 @@ SRC = ROOT / "src" / "assets"
 OUT = ROOT / "dist" / "assets" / "img"
 OUT.mkdir(parents=True, exist_ok=True)
 
+WIDTHS = [1800, 1200, 800, 480]
 PHOTOS = {
-    # name: (source, widths)
-    "lab":    ("hero.jpg",   [1800, 1200, 800, 480]),
-    "campus": ("school.jpg", [1800, 1200, 800, 480]),
-    "sewing": ("clubs.jpg",  [1200, 800, 480]),
+    # name: source file in src/assets. Each is emitted at every width in WIDTHS that is
+    # not larger than the source, plus the source's own width if it is smaller than 1800.
+    "lab": "hero.jpg", "campus": "school.jpg", "sewing": "clubs.jpg",
+    "cutting": "cutting.jpg", "library": "library.jpg", "building": "building.jpg",
+    "playground": "playground.jpg", "wings": "wings.jpg", "joy": "joy.jpg",
+    "basketball": "basketball.jpg", "football": "football.jpg", "huddle": "huddle.jpg",
+    "volunteers": "volunteers.jpg", "volunteers-table": "volunteers-table.jpg",
+    "graduate": "graduate.jpg", "graduates": "graduates.jpg", "staff": "staff.jpg",
+    "training": "training.jpg", "art": "art.jpg", "computer": "computer.jpg",
+    "computer-lab": "computer-lab.jpg", "vr": "vr.jpg", "construction": "construction.jpg",
+    "classroom": "classroom.jpg", "foosball": "foosball.jpg", "outdoors": "outdoors.jpg",
 }
 
 
-def photo(name, source, widths):
+def photo(name, source):
     im = Image.open(SRC / source)
     im = ImageOps.exif_transpose(im).convert("RGB")   # honour orientation, then drop all metadata
+    widths = [w for w in WIDTHS if w <= im.width]
+    if im.width < WIDTHS[0] and im.width not in widths:
+        widths.insert(0, im.width)
     for w in widths:
-        if w > im.width:
-            continue
         h = round(im.height * w / im.width)
         r = im.resize((w, h), Image.LANCZOS)
         r.save(OUT / f"{name}-{w}.webp", "WEBP", quality=78, method=6)
@@ -86,7 +95,7 @@ def seal_circle(source, dest):
 
 
 if __name__ == "__main__":
-    for name, (source, widths) in PHOTOS.items():
-        photo(name, source, widths)
+    for name, source in PHOTOS.items():
+        photo(name, source)
     unmatte("logo.jpg", "logo.png", 960)
     seal_circle("naps-seal.png", "naps-seal.png")

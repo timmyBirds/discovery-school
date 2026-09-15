@@ -36,10 +36,10 @@ Every one of these is marked on the live page with an orange dashed "To complete
 - **Tuition & bus fees** — transcribed from the 2025–26 fee sheets into `src/pages/admissions.html` (`#fees`, `#payment`); update each school year.
 - **School calendar** — `src/pages/families.html`, section `#calendar` (currently shows 2025–26 term 1, the last one published).
 - **Student handbook PDF** → `dist/assets/docs/student-handbook.pdf`; lunch/boarding menus.
-- **Job board & next employment-exam date** — `src/pages/careers.html`.
+- **Job board** — `src/pages/careers.html` reflects the closed 2026–27 round; update the board and status pill when the next recruitment notice is issued.
 - **Volunteer travel information** — `src/pages/partner.html`, section `#visit`.
 - **Contact form** — create a free form at formspree.io and replace `YOUR_FORM_ID` in `src/pages/contact.html`.
-- **More photos** — see the note at the bottom of `src/pages/student-life.html`.
+- **More photos** — 23 photos from the old site are in `src/assets/`; add new ones the same way (see Editing above).
 - **Original logo file** (SVG or high-resolution transparent PNG) — the current `logo.png` is recovered from a 960px JPEG.
 - **Staff page** — placeholder only; requirements still to be gathered (see the comment in `src/pages/staff.html`).
 - **Values tree** — `tools/tree.py` generates `src/partials/tree.svg` in the style of the school's artwork; replace with the original file if the school can supply it (SVG or a large transparent PNG).

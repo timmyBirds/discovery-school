@@ -9,11 +9,15 @@ const id = '12345678-1234-1234-1234-123456789abc';
 function fixture() {
   const rows = [];
   const settings = new Map();
+  let statusChoices = [];
   const sheet = {
     getLastRow: () => rows.length,
+    getMaxRows: () => 1000,
     appendRow: row => rows.push(row),
     setFrozenRows: () => {},
-    getRange: (row, col, count) => count === 1 && row === 1 ? { setFontWeight: () => {} } : {
+    getRange: (row, col, count) => row === 1 ? { setFontWeight: () => {} } : row === 2 && col === 3 ? {
+      setDataValidation: rule => { statusChoices = rule; }
+    } : {
       createTextFinder: value => ({ matchEntireCell: () => ({
         findNext: () => rows.slice(1).find(entry => entry[0] === value) || null
       }) })
@@ -27,7 +31,9 @@ function fixture() {
   const context = {
     SpreadsheetApp: {
       getActiveSpreadsheet: () => spreadsheet,
-      openById: value => value === 'sheet-id' ? spreadsheet : null
+      openById: value => value === 'sheet-id' ? spreadsheet : null,
+      newDataValidation: () => ({ requireValueInList(values) { this.values = values; return this; },
+        build() { return this.values; } })
     },
     PropertiesService: { getScriptProperties: () => ({
       getProperty: key => settings.get(key) || '',
@@ -47,7 +53,7 @@ function fixture() {
   vm.createContext(context);
   vm.runInContext(source, context);
   context.setupFeedback();
-  return { context, rows, settings };
+  return { context, rows, settings, getStatusChoices: () => statusChoices };
 }
 
 function review(overrides = {}) {
@@ -59,10 +65,11 @@ function review(overrides = {}) {
 }
 
 test('sets up a private Sheet and stores one row per feedback ID', () => {
-  const { context, rows, settings } = fixture();
+  const { context, rows, settings, getStatusChoices } = fixture();
   assert.equal(rows.length, 1);
   assert.equal(settings.get('SPREADSHEET_ID'), 'sheet-id');
   assert.equal(settings.get('ALLOWED_ORIGINS'), 'https://timmybirds.github.io');
+  assert.deepEqual(Array.from(getStatusChoices()), ['New', 'In progress', 'Ready for review', 'Approved']);
   context.submitFeedback(review(), settings.get('ACCESS_CODE'));
   context.submitFeedback(review(), settings.get('ACCESS_CODE'));
   assert.equal(rows.length, 2);

@@ -73,6 +73,9 @@ function feedbackSheet_(spreadsheet) {
     sheet.appendRow(HEADERS);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+    const statuses = ['New', 'In progress', 'Ready for review', 'Approved'];
+    const rule = SpreadsheetApp.newDataValidation().requireValueInList(statuses, true).build();
+    sheet.getRange(2, 3, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
   }
   return sheet;
 }

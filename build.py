@@ -56,7 +56,7 @@ for page in sorted((SRC / "pages").glob("*.html")):
             parser.error("GITHUB_SHA must be a 40-character commit hash")
         review_assets = (
             '<link rel="stylesheet" href="review.css">\n'
-            '<script src="review.js" defer data-api="%s" data-google-script="%s" data-version="%s"></script>\n' % (api_url, google_script_url, version)
+            '<script src="review.js?v=%s" defer data-api="%s" data-google-script="%s" data-version="%s"></script>\n' % (version, api_url, google_script_url, version)
         )
     else:
         review_assets = ""

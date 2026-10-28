@@ -76,14 +76,14 @@
       var host;
       try { host = new URL(event.origin).hostname; } catch (error) { return; }
       if (host !== 'script.google.com' && host !== 'script.googleusercontent.com' &&
-          !host.endsWith('.script.googleusercontent.com')) return;
+          !host.endsWith('.script.googleusercontent.com') && !host.endsWith('-script.googleusercontent.com')) return;
       var data = event.data;
       if (!data || data.source !== 'discovery-review-bridge') return;
       if (data.type === 'ready') {
         bridgeWindow = event.source;
         bridgeOrigin = event.origin;
         bridgeWaiters.splice(0).forEach(function (resolve) { resolve(); });
-        if (code) setStatus('Connected to Google Sheets. Your feedback can be sent.');
+        setStatus('Feedback service ready.');
         return;
       }
       if (event.source !== bridgeWindow || event.origin !== bridgeOrigin || data.type !== 'result') return;

@@ -57,6 +57,7 @@ test('creates an issue and returns the comment for the review page', async () =>
     assert.equal((await created.json()).review.id, 42);
     assert.match(savedIssue.body, /English should lead/);
     assert.match(savedIssue.body, /academics\.html/);
+    assert.match(savedIssue.body, /Website pull request linked here/);
     const listed = await worker.fetch(request('GET'), env);
     const reviews = (await listed.json()).reviews;
     assert.equal(reviews.length, 1);

@@ -1,0 +1,37 @@
+name: Website checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check feedback service
+        run: node --test feedback-worker/index.test.mjs
+      - name: Check review build
+        run: |
+          node --check src/review.js
+          python3 build.py --review
+          test -f dist/review.js
+          test -f dist/review-pages.json
+      - name: Check production build excludes review tools
+        run: |
+          python3 build.py
+          test ! -e dist/review.js
+          test ! -e dist/review.css
+          test ! -e dist/review-pages.json
+          if grep -Rl 'review.js' dist --include='*.html'; then exit 1; fi

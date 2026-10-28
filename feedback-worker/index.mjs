@@ -74,7 +74,7 @@ function issueBody(review, env) {
     return `- [${anchor.page}](${url}) — ${anchor.label.replace(/\n/g, ' ')}`;
   }).join('\n');
   const quoted = review.message.split('\n').map((line) => `> ${line}`).join('\n');
-  return `${marker}\n## Feedback\n${quoted}\n\n## Locations\n${locations}\n\nSite version: ${review.version || 'unknown'}\n\n<!-- review-data:${encodeURIComponent(JSON.stringify(review))} -->`;
+  return `${marker}\n## Feedback\n${quoted}\n\n## Locations\n${locations}\n\nSite version: ${review.version || 'unknown'}\n\n## Delivery\n- [ ] Scope and wording agreed\n- [ ] Website pull request linked here\n- [ ] Automated checks pass\n- [ ] Page preview approved\n- [ ] Pull request merged and issue closed\n\n<!-- review-data:${encodeURIComponent(JSON.stringify(review))} -->`;
 }
 
 function extract(issue) {

@@ -32,7 +32,7 @@
         '<div class="review-form-actions"><button type="button" class="review-cancel">Cancel</button><button type="submit" class="review-submit">Submit feedback</button></div>' +
       '</form>' +
       '<p class="review-status" role="status" aria-live="polite"></p>' +
-      '<div class="review-list-head"><h3>Feedback</h3><button type="button" class="review-export">Export drafts</button></div>' +
+      '<div class="review-list-head"><h3>Feedback</h3><div class="review-list-actions"><button type="button" class="review-import">Import drafts</button><button type="button" class="review-export">Export drafts</button><input type="file" class="review-import-file" accept=".json,application/json" hidden></div></div>' +
       '<div class="review-list"></div>' +
     '</aside>';
   document.body.appendChild(ui);
@@ -373,6 +373,38 @@
     link.download = 'discovery-feedback-drafts.json';
     link.click();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+  var importFile = ui.querySelector('.review-import-file');
+  ui.querySelector('.review-import').addEventListener('click', function () { importFile.click(); });
+  importFile.addEventListener('change', async function () {
+    var file = importFile.files[0];
+    importFile.value = '';
+    if (!file) return;
+    if (file.size > 1000000) return setStatus('Draft file is too large.', true);
+    try {
+      var imported = JSON.parse(await file.text());
+      if (!Array.isArray(imported) || !imported.length || imported.length > 100) throw new Error('Expected 1 to 100 drafts.');
+      imported = imported.map(function (draft) {
+        if (!draft || typeof draft.message !== 'string' || !draft.message.trim() || draft.message.length > 4000 ||
+            !Array.isArray(draft.anchors) || !draft.anchors.length || draft.anchors.length > 100) throw new Error('Invalid feedback draft.');
+        var anchors = draft.anchors.map(function (anchor) {
+          if (!anchor || !/^[a-z0-9-]+\.html$/.test(anchor.page) || typeof anchor.selector !== 'string' ||
+              !anchor.selector || anchor.selector.length > 500) throw new Error('Invalid draft location.');
+          return { page: anchor.page, selector: anchor.selector, quote: String(anchor.quote || '').slice(0, 300), label: String(anchor.label || '').slice(0, 150) };
+        });
+        return { pending: true, message: draft.message.trim(), anchors: anchors,
+          createdAt: typeof draft.createdAt === 'string' ? draft.createdAt : '',
+          version: /^[0-9a-f]{40}$/.test(draft.version || '') ? draft.version : '' };
+      });
+      var known = new Set(drafts.map(function (draft) { return draft.message + JSON.stringify(draft.anchors); }));
+      var added = 0;
+      imported.forEach(function (draft) {
+        var key = draft.message + JSON.stringify(draft.anchors);
+        if (!known.has(key)) { drafts.push(draft); known.add(key); added++; }
+      });
+      if (added) saveDrafts();
+      setStatus(added ? added + ' draft' + (added === 1 ? '' : 's') + ' imported. Send each draft when ready.' : 'All drafts are already here.');
+    } catch (error) { setStatus('Could not import drafts: ' + error.message, true); }
   });
   window.addEventListener('resize', renderNotes);
   window.addEventListener('load', renderNotes);

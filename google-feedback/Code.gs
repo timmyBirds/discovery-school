@@ -11,14 +11,11 @@ function setupFeedback() {
   if (!spreadsheet) throw new Error('Open this script from the feedback spreadsheet.');
   const properties = PropertiesService.getScriptProperties();
   properties.setProperty('SPREADSHEET_ID', spreadsheet.getId());
+  properties.deleteProperty('ACCESS_CODE');
   if (!properties.getProperty('ALLOWED_ORIGINS')) {
     properties.setProperty('ALLOWED_ORIGINS', 'https://timmybirds.github.io');
   }
-  if (!properties.getProperty('ACCESS_CODE')) {
-    properties.setProperty('ACCESS_CODE', Utilities.getUuid() + Utilities.getUuid());
-  }
   feedbackSheet_(spreadsheet);
-  console.log('Review access code: ' + properties.getProperty('ACCESS_CODE'));
 }
 
 function doGet(request) {
@@ -33,12 +30,8 @@ function doGet(request) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function submitFeedback(raw, accessCode) {
+function submitFeedback(raw) {
   const properties = PropertiesService.getScriptProperties();
-  const expectedCode = properties.getProperty('ACCESS_CODE');
-  if (!expectedCode || String(accessCode || '') !== expectedCode) {
-    throw new Error('Incorrect review access code.');
-  }
   const review = normalizeFeedback_(raw);
   const spreadsheetId = properties.getProperty('SPREADSHEET_ID');
   if (!spreadsheetId) throw new Error('The feedback spreadsheet has not been set up.');

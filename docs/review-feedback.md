@@ -20,15 +20,13 @@ them automatically; use **Send draft** on each item after connecting.
    [`google-feedback/Bridge.html`](../google-feedback/Bridge.html). Save.
 3. Select `setupFeedback` in the Apps Script editor and run it once. Authorize
    the script under the Google account that owns the Sheet. This creates the
-   **Feedback** tab and stores its ID and a random review access code in Apps
-   Script Properties. Open **Executions** to read the logged access code and
-   store it privately. Give the code only to the reviewer.
+   **Feedback** tab and stores its ID in Apps Script Properties.
 4. Select **Deploy → New deployment → Web app**. Set **Execute as: Me** and
    **Who has access: Anyone**. Deploy and copy the URL ending in `/exec`.
-   "Anyone" lets the reviewer use the website without a Google login; the
-   script checks the review access code before writing to the Sheet. The Sheet
-   itself stays restricted. The public review site is still visible to anyone
-   with its URL.
+   "Anyone" lets visitors submit without a Google login or access code. Anyone
+   who can reach the public review site can submit comments, so share the link
+   with the intended reviewer and check the Sheet for unwanted submissions.
+   The Sheet itself stays restricted.
 5. In the website repository, set the Actions variable `GOOGLE_SCRIPT_URL` to
    that `/exec` URL. Leave `REVIEW_API_URL` unset. Re-run the GitHub Pages
    deployment, or push a commit. This activates the review toolbar at
@@ -57,9 +55,9 @@ the row's status and notes asynchronously.
 
 After a confirmed save, the reviewer's browser keeps its own sent pins. Google
 Sheets is the shared source of truth; submitted pins from other browsers are
-not loaded back onto the page. The access code controls submission, not access
-to the public review website. Do not put student information or other private
-data in comments.
+not loaded back onto the page. Anyone who can reach the public review website
+can submit comments. Do not put student information or other private data in
+comments.
 
 ## Build modes
 

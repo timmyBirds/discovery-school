@@ -6,7 +6,7 @@
   var page = location.pathname.split('/').pop() || 'index.html';
   var storageKey = 'discovery-review-drafts-v1';
   var codeKey = 'discovery-review-code-v1';
-  var code = sessionStorage.getItem(codeKey) || '';
+  var code = api ? sessionStorage.getItem(codeKey) || '' : '';
   var drafts = JSON.parse(localStorage.getItem(storageKey) || '[]');
   var sentKey = 'discovery-review-sent-v1';
   var notes = googleScript ? JSON.parse(localStorage.getItem(sentKey) || '[]') : [];
@@ -54,6 +54,7 @@
   var codeInput = ui.querySelector('#review-code');
   var submit = ui.querySelector('.review-submit');
   codeInput.value = code;
+  if (googleScript) ui.querySelector('.review-connect').hidden = true;
   if (!api && !googleScript) {
     ui.querySelector('.review-connect').hidden = true;
     submit.textContent = 'Save draft';
@@ -118,7 +119,7 @@
       }, 20000);
       pendingSends.set(requestId, { resolve: resolve, reject: reject, timer: timer });
       bridgeWindow.postMessage({ source: 'discovery-review-page', type: 'submit', requestId: requestId,
-        code: code, feedback: feedback }, bridgeOrigin);
+        feedback: feedback }, bridgeOrigin);
     });
   }
 
@@ -240,7 +241,7 @@
           retry.type = 'button';
           retry.textContent = 'Send draft';
           retry.addEventListener('click', async function () {
-            if (!code) return setStatus('Enter the review access code and connect first.', true);
+            if (api && !code) return setStatus('Enter the review access code and connect first.', true);
             retry.disabled = true;
             try {
               var saved = googleScript ? await sendToGoogle(note) : (await request('POST', note)).review;
@@ -311,8 +312,7 @@
     code = codeInput.value.trim();
     if (!code) return setStatus('Enter the review access code.', true);
     sessionStorage.setItem(codeKey, code);
-    if (googleScript) setStatus(bridgeWindow ? 'Connected to Google Sheets. Your feedback can be sent.' : 'Connecting to Google Sheets…');
-    else loadNotes();
+    loadNotes();
   });
   pick.addEventListener('click', function () {
     choosing = !choosing;
@@ -420,7 +420,7 @@
       form.hidden = true;
       return;
     }
-    if (!code) return setStatus('Enter the review access code and connect first.', true);
+            if (api && !code) return setStatus('Enter the review access code and connect first.', true);
     submit.disabled = true;
     try {
       var saved = googleScript ? await sendToGoogle(feedback) : (await request('POST', feedback)).review;

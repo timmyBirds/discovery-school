@@ -37,7 +37,8 @@ function fixture() {
     },
     PropertiesService: { getScriptProperties: () => ({
       getProperty: key => settings.get(key) || '',
-      setProperty: (key, value) => settings.set(key, value)
+      setProperty: (key, value) => settings.set(key, value),
+      deleteProperty: key => settings.delete(key)
     }) },
     LockService: { getScriptLock: () => ({ waitLock: () => {}, releaseLock: () => {} }) },
     Utilities: { getUuid: () => id },
@@ -70,21 +71,20 @@ test('sets up a private Sheet and stores one row per feedback ID', () => {
   assert.equal(settings.get('SPREADSHEET_ID'), 'sheet-id');
   assert.equal(settings.get('ALLOWED_ORIGINS'), 'https://timmybirds.github.io');
   assert.deepEqual(Array.from(getStatusChoices()), ['New', 'In progress', 'Ready for review', 'Approved']);
-  context.submitFeedback(review(), settings.get('ACCESS_CODE'));
-  context.submitFeedback(review(), settings.get('ACCESS_CODE'));
+  context.submitFeedback(review());
+  context.submitFeedback(review());
   assert.equal(rows.length, 2);
   assert.equal(rows[1][2], 'New');
   assert.equal(rows[1][4], 'https://timmybirds.github.io/discovery-school/index.html');
   assert.equal(rows[1][7], 'Change this wording');
 });
 
-test('rejects invalid access, invalid locations, and spreadsheet formulas', () => {
-  const { context, rows, settings } = fixture();
-  assert.throws(() => context.submitFeedback(review(), 'wrong'), /Incorrect review access code/);
-  assert.throws(() => context.submitFeedback(review({ anchors: [{ page: '../bad', selector: 'x' }] }),
-    settings.get('ACCESS_CODE')), /Invalid page location/);
+test('rejects invalid locations and safely stores formula-like feedback', () => {
+  const { context, rows } = fixture();
+  assert.throws(() => context.submitFeedback(review({ anchors: [{ page: '../bad', selector: 'x' }] })),
+    /Invalid page location/);
   assert.equal(rows.length, 1);
-  context.submitFeedback(review({ message: '=IMPORTDATA("bad")' }), settings.get('ACCESS_CODE'));
+  context.submitFeedback(review({ message: '=IMPORTDATA("bad")' }));
   assert.equal(rows[1][7], "'=IMPORTDATA(\"bad\")");
 });
 
@@ -107,9 +107,8 @@ test('bridge accepts only messages from the review site and confirms a save', ()
   const scriptRun = {
     withSuccessHandler(fn) { success = fn; return this; },
     withFailureHandler() { return this; },
-    submitFeedback: (feedback, code) => {
+    submitFeedback: feedback => {
       assert.equal(feedback.id, id);
-      assert.equal(code, 'review-code');
       success(feedback);
     }
   };
@@ -120,7 +119,7 @@ test('bridge accepts only messages from the review site and confirms a save', ()
   assert.equal(messages[0].data.type, 'ready');
   const event = { origin: 'https://evil.example', source: top,
     data: { source: 'discovery-review-page', type: 'submit', requestId: id,
-      feedback: review(), code: 'review-code' } };
+      feedback: review() } };
   listener(event);
   assert.equal(messages.length, 1);
   listener({ ...event, origin: 'https://timmybirds.github.io' });

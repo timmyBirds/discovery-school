@@ -17,7 +17,7 @@
       .withFailureHandler(error => window.top.postMessage(
         { source, type: 'result', requestId, ok: false,
           error: (error && error.message) || 'Google Sheets could not save this feedback.' }, allowedOrigin))
-      .submitFeedback(data.feedback, data.code);
+      .submitFeedback(data.feedback);
   });
   window.top.postMessage({ source, type: 'ready' }, allowedOrigin);
 </script>

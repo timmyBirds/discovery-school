@@ -24,11 +24,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build review site
+      - name: Build site
         env:
           REVIEW_API_URL: ${{ vars.REVIEW_API_URL }}
+          GOOGLE_SCRIPT_URL: ${{ vars.GOOGLE_SCRIPT_URL }}
         run: |
-          if [ -n "$REVIEW_API_URL" ]; then
+          if [ -n "$REVIEW_API_URL" ] || [ -n "$GOOGLE_SCRIPT_URL" ]; then
             python3 build.py --review
           else
             python3 build.py

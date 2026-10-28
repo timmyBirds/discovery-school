@@ -1,93 +1,85 @@
-# Development-site feedback
+# Development-site feedback with Google Sheets
 
-The GitHub Pages build can include a review toolbar. A reviewer clicks an element,
-types feedback, and can search for related wording across all pages. Submitted
-feedback becomes an issue in a separate private GitHub repository. The reviewer
-does not need a GitHub account. Closing an issue removes its pin from the review
-site after refresh.
+The review build lets a reviewer click a page section or image, select text, and
+comment on one spot or related wording across the site. Each submitted comment
+is saved as a row in a private Google Sheet. The reviewer does not need email,
+a Google account, or a GitHub account. The site keeps a browser-local draft if
+Google does not confirm the save.
 
-The two browser-local drafts from the first preview are not shared automatically
-with GitHub Pages: browser storage is separate for `localhost` and `github.io`.
-On the local page, use **Export drafts**. On the hosted page, use **Import drafts**,
-then connect with the access code and use **Send draft** on each item. Importing
-never submits feedback automatically, and importing the same file again skips
-duplicate drafts. Keep the export file private because it contains unpublished
-comments.
+The two drafts from the first local preview remain in that browser. Export them
+there and import the JSON file on the hosted review site. Importing never sends
+them automatically; use **Send draft** on each item after connecting.
+
+## One-time Google setup
+
+1. Create a new Google Sheet called **Discovery School website feedback**. Keep
+   its sharing set to **Restricted**. The reviewer does not need access to it.
+2. In that Sheet, open **Extensions → Apps Script**. Replace `Code.gs` with the
+   contents of [`google-feedback/Code.gs`](../google-feedback/Code.gs). Add an
+   HTML file named `Bridge` and paste in
+   [`google-feedback/Bridge.html`](../google-feedback/Bridge.html). Save.
+3. Select `setupFeedback` in the Apps Script editor and run it once. Authorize
+   the script under the Google account that owns the Sheet. This creates the
+   **Feedback** tab and stores its ID and a random review access code in Apps
+   Script Properties. Open **Executions** to read the logged access code and
+   store it privately. Give the code only to the reviewer.
+4. Select **Deploy → New deployment → Web app**. Set **Execute as: Me** and
+   **Who has access: Anyone**. Deploy and copy the URL ending in `/exec`.
+   "Anyone" lets the reviewer use the website without a Google login; the
+   script checks the review access code before writing to the Sheet. The Sheet
+   itself stays restricted. The public review site is still visible to anyone
+   with its URL.
+5. In the website repository, set the Actions variable `GOOGLE_SCRIPT_URL` to
+   that `/exec` URL. Leave `REVIEW_API_URL` unset. Re-run the GitHub Pages
+   deployment, or push a commit. This activates the review toolbar at
+   `https://timmybirds.github.io/discovery-school/`.
+6. Submit a test comment from the hosted site and verify a new row in the
+   **Feedback** tab before sharing the review link.
+
+When changing Apps Script code later, select **Deploy → Manage deployments →
+Edit → New version**. Saving source alone does not update the `/exec` version.
+
+The script needs Google Sheets authorization to write to the feedback file.
+Google may ask for access to your spreadsheets because Apps Script web apps
+cannot use the bound file's `getActiveSpreadsheet()` method. This code only
+opens the saved feedback Sheet ID. It does not use Gmail or Drive APIs. The
+Google Drive connector in Codex is not needed.
+
+## Review and tracking
+
+The Sheet contains **Status**, **Assigned to**, **Approved**, and **Notes**
+columns. A simple workflow is: New → In progress → Ready for review → Approved.
+The **Page URL**, selected text, element label, and related locations tell the
+implementer what to change. The **Location data** column keeps the exact page
+selectors for technical follow-up. A GitHub Issue is optional; the Sheet can
+be the work list. The two people can work in different time zones by updating
+the row's status and notes asynchronously.
+
+After a confirmed save, the reviewer's browser keeps its own sent pins. Google
+Sheets is the shared source of truth; submitted pins from other browsers are
+not loaded back onto the page. The access code controls submission, not access
+to the public review website. Do not put student information or other private
+data in comments.
 
 ## Build modes
 
 - `python3 build.py` produces the production site without review code.
-- `python3 build.py --review` adds `review.js`, `review.css`, and the page index.
-- The GitHub Pages workflow runs the review build when repository variable
-  `REVIEW_API_URL` is set. Without it, the workflow builds the production site.
-- A review build without an API URL can save browser-local drafts and export them
-  as JSON; it cannot send feedback to the designer.
+- `python3 build.py --review` includes the review toolbar.
+- GitHub Pages runs the review build only when `GOOGLE_SCRIPT_URL` or the older
+  `REVIEW_API_URL` repository variable is set. Both must not be set together.
+- A review build without a storage URL can save only browser-local drafts.
+- To test against the Google script from localhost, add the exact localhost
+  origin to its `ALLOWED_ORIGINS` Script Property, separated by a comma.
 
-## Connect the feedback endpoint
-
-1. Create a **private** GitHub repository for feedback, with Issues enabled.
-   The default name in `feedback-worker/wrangler.toml.example` is
-   `timmyBirds/discovery-school-feedback`; change it if needed.
-2. Create a fine-grained GitHub token restricted to that feedback repository,
-   with **Issues: Read and write**. Do not put the token in the website, GitHub
-   Pages variables, or the repository.
-3. Create a Cloudflare account and a scoped account API token for Workers.
-   To create this Worker with Wrangler, the token needs Workers product `Admin`;
-   after creation, a token scoped to this Worker with `Editor` is enough for
-   subsequent deployments. Set `CLOUDFLARE_API_TOKEN` and
-   `CLOUDFLARE_ACCOUNT_ID` in your shell, not in this repository. The default
-   `wrangler login` OAuth flow requests broader access than this task needs.
-   Deploy the small Worker in `feedback-worker/`: copy
-   `wrangler.toml.example` to `wrangler.toml`, then run these commands from
-   that directory:
-
-   ```sh
-   npx wrangler secret put GITHUB_TOKEN
-   npx wrangler secret put REVIEW_ACCESS_KEY
-   npx wrangler deploy
-   ```
-
-   Give the reviewer the access code entered for `REVIEW_ACCESS_KEY` through a
-   private channel. The code protects feedback, not the public website itself.
-4. In the website repository, set Actions variable `REVIEW_API_URL` to the
-   deployed Worker URL (for example, `https://discovery-school-feedback.example.workers.dev`).
-   Re-run the Pages workflow or push a commit. The review build will then be live.
-
-The Worker checks the GitHub Pages origin and the access code before accepting
-or returning feedback. Its GitHub token stays server-side. The GitHub Pages site
-itself remains public. For local development, add the exact local preview origin
-(for example, `http://127.0.0.1:4178`) to `ALLOWED_ORIGINS` in `wrangler.toml`
-if testing against the deployed Worker.
-
-## Ticket to approved change
-
-Each submitted comment creates one issue in the private feedback repository,
-including its page locations and a delivery checklist. For each issue:
-
-1. Agree on the requested wording or layout and acceptance criteria in the issue.
-2. Make the website change in a branch and open a pull request in the website repository. Link that PR in the feedback issue; avoid copying private comments into a public PR.
-3. The `Website checks` GitHub Action runs the Worker tests and checks both site build modes on the PR.
-4. Have the site owner review the PR and a page preview. The current Pages workflow only publishes `main`; a pre-merge visual preview needs a separate preview host or a downloaded build artifact.
-5. Merge after approval. The Pages workflow publishes `main`; verify the hosted page and close the feedback issue. Closing it removes the comment pin after the reviewer refreshes.
-
-To enforce the gate, configure a `main` branch ruleset on GitHub requiring a pull
-request and the `test` job from `Website checks` to pass. Add a required approving
-reviewer if the website repository has another collaborator with write access.
-The person leaving feedback does not need a GitHub account, but approving a PR
-*in GitHub* does require a GitHub account with repository access.
-
-The GitHub Pages URL is currently the review environment when `REVIEW_API_URL`
-is set. Do not point the production domain at the same Pages deployment unless
-the feedback tool is intentionally allowed there. A separate preview deployment
-is needed to keep review and production versions live at the same time.
+The current GitHub Pages URL is the review environment once the variable is
+set. A separate deployment is needed if the final production site and review
+site must be available at different URLs at the same time.
 
 ## Checks
 
 ```sh
-node --test feedback-worker/index.test.mjs
-python3 build.py --review
+node --test google-feedback/Code.test.mjs
+node --check src/review.js
+GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/test-deployment/exec python3 build.py --review
 python3 build.py
 ```
-
-The final production build should contain no `review.js`, `review.css`, or
-`review-pages.json` in `dist/`, and its HTML should not reference them.

@@ -44,14 +44,19 @@ for page in sorted((SRC / "pages").glob("*.html")):
         html = html.replace("{{cur:%s}}" % key, ' aria-current="page"' if key == slug else "")
     if args.review:
         api_url = os.environ.get("REVIEW_API_URL", "").rstrip("/")
+        google_script_url = os.environ.get("GOOGLE_SCRIPT_URL", "").strip()
         version = os.environ.get("GITHUB_SHA", "")
         if api_url and not re.fullmatch(r"https://[A-Za-z0-9._:/-]+", api_url):
             parser.error("REVIEW_API_URL must be an HTTPS URL")
+        if google_script_url and not re.fullmatch(r"https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec", google_script_url):
+            parser.error("GOOGLE_SCRIPT_URL must be a deployed Apps Script /exec URL")
+        if api_url and google_script_url:
+            parser.error("Set only one of REVIEW_API_URL and GOOGLE_SCRIPT_URL")
         if version and not re.fullmatch(r"[0-9a-f]{40}", version):
             parser.error("GITHUB_SHA must be a 40-character commit hash")
         review_assets = (
             '<link rel="stylesheet" href="review.css">\n'
-            '<script src="review.js" defer data-api="%s" data-version="%s"></script>\n' % (api_url, version)
+            '<script src="review.js" defer data-api="%s" data-google-script="%s" data-version="%s"></script>\n' % (api_url, google_script_url, version)
         )
     else:
         review_assets = ""

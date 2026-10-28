@@ -1,13 +1,19 @@
 (function () {
   var script = document.currentScript;
   var api = (script && script.dataset.api) || '';
+  var googleScript = (script && script.dataset.googleScript) || '';
   var version = (script && script.dataset.version) || '';
   var page = location.pathname.split('/').pop() || 'index.html';
   var storageKey = 'discovery-review-drafts-v1';
   var codeKey = 'discovery-review-code-v1';
   var code = sessionStorage.getItem(codeKey) || '';
-  var notes = [];
   var drafts = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  var sentKey = 'discovery-review-sent-v1';
+  var notes = googleScript ? JSON.parse(localStorage.getItem(sentKey) || '[]') : [];
+  var bridgeWindow = null;
+  var bridgeOrigin = '';
+  var bridgeWaiters = [];
+  var pendingSends = new Map();
   var selected = null;
   var matches = [];
   var choosing = false;
@@ -48,7 +54,7 @@
   var codeInput = ui.querySelector('#review-code');
   var submit = ui.querySelector('.review-submit');
   codeInput.value = code;
-  if (!api) {
+  if (!api && !googleScript) {
     ui.querySelector('.review-connect').hidden = true;
     submit.textContent = 'Save draft';
     status.textContent = 'Feedback service is not connected yet. Drafts stay in this browser.';
@@ -57,6 +63,69 @@
   function setStatus(message, error) {
     status.textContent = message;
     status.classList.toggle('is-error', !!error);
+  }
+
+  if (googleScript) {
+    var bridge = document.createElement('iframe');
+    bridge.hidden = true;
+    bridge.title = 'Feedback storage connection';
+    bridge.src = googleScript + '?parentOrigin=' + encodeURIComponent(location.origin);
+    document.body.appendChild(bridge);
+    window.addEventListener('message', function (event) {
+      var host;
+      try { host = new URL(event.origin).hostname; } catch (error) { return; }
+      if (host !== 'script.google.com' && host !== 'script.googleusercontent.com' &&
+          !host.endsWith('.script.googleusercontent.com')) return;
+      var data = event.data;
+      if (!data || data.source !== 'discovery-review-bridge') return;
+      if (data.type === 'ready') {
+        bridgeWindow = event.source;
+        bridgeOrigin = event.origin;
+        bridgeWaiters.splice(0).forEach(function (resolve) { resolve(); });
+        if (code) setStatus('Connected to Google Sheets. Your feedback can be sent.');
+        return;
+      }
+      if (event.source !== bridgeWindow || event.origin !== bridgeOrigin || data.type !== 'result') return;
+      var pending = pendingSends.get(data.requestId);
+      if (!pending) return;
+      pendingSends.delete(data.requestId);
+      clearTimeout(pending.timer);
+      if (data.ok) pending.resolve(data.review);
+      else pending.reject(new Error(data.error || 'Google Sheets did not save the feedback.'));
+    });
+  }
+
+  function waitForBridge() {
+    if (bridgeWindow) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () {
+        var index = bridgeWaiters.indexOf(ready);
+        if (index !== -1) bridgeWaiters.splice(index, 1);
+        reject(new Error('Could not connect to Google Sheets. Try again later.'));
+      }, 15000);
+      function ready() { clearTimeout(timer); resolve(); }
+      bridgeWaiters.push(ready);
+    });
+  }
+
+  async function sendToGoogle(feedback) {
+    await waitForBridge();
+    var requestId = crypto.randomUUID();
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () {
+        pendingSends.delete(requestId);
+        reject(new Error('No save confirmation arrived from Google Sheets. Your draft was kept.'));
+      }, 20000);
+      pendingSends.set(requestId, { resolve: resolve, reject: reject, timer: timer });
+      bridgeWindow.postMessage({ source: 'discovery-review-page', type: 'submit', requestId: requestId,
+        code: code, feedback: feedback }, bridgeOrigin);
+    });
+  }
+
+  function keepSent(review) {
+    if (!notes.some(function (note) { return note.id === review.id; })) notes.push(review);
+    try { localStorage.setItem(sentKey, JSON.stringify(notes)); } catch (error) { /* Sheet already saved it. */ }
+    renderNotes();
   }
 
   function setPanel(open) {
@@ -166,7 +235,7 @@
         item.appendChild(flag);
         var actions = document.createElement('div');
         actions.className = 'review-draft-actions';
-        if (api) {
+        if (api || googleScript) {
           var retry = document.createElement('button');
           retry.type = 'button';
           retry.textContent = 'Send draft';
@@ -174,8 +243,9 @@
             if (!code) return setStatus('Enter the review access code and connect first.', true);
             retry.disabled = true;
             try {
-              var saved = await request('POST', note);
-              notes.push(saved.review);
+              var saved = googleScript ? await sendToGoogle(note) : (await request('POST', note)).review;
+              if (googleScript) keepSent(saved);
+              else notes.push(saved);
               drafts.splice(drafts.indexOf(note), 1);
               saveDrafts();
               setStatus('Draft sent.');
@@ -241,7 +311,8 @@
     code = codeInput.value.trim();
     if (!code) return setStatus('Enter the review access code.', true);
     sessionStorage.setItem(codeKey, code);
-    loadNotes();
+    if (googleScript) setStatus(bridgeWindow ? 'Connected to Google Sheets. Your feedback can be sent.' : 'Connecting to Google Sheets…');
+    else loadNotes();
   });
   pick.addEventListener('click', function () {
     choosing = !choosing;
@@ -340,8 +411,9 @@
       anchors = anchors.filter(function (a, i, arr) { return arr.findIndex(function (b) { return b.page === a.page && b.selector === a.selector; }) === i; });
       if (anchors.length < 2) return setStatus('Find and select related mentions first.', true);
     }
-    var feedback = { message: message, anchors: anchors, createdAt: new Date().toISOString(), version: version };
-    if (!api) {
+    var feedback = { id: crypto.randomUUID(), message: message, anchors: anchors,
+      createdAt: new Date().toISOString(), version: version };
+    if (!api && !googleScript) {
       drafts.push(Object.assign({ pending: true }, feedback));
       saveDrafts();
       setStatus('Draft saved in this browser. Export it to share.');
@@ -351,9 +423,9 @@
     if (!code) return setStatus('Enter the review access code and connect first.', true);
     submit.disabled = true;
     try {
-      var saved = await request('POST', feedback);
-      notes.push(saved.review);
-      renderNotes();
+      var saved = googleScript ? await sendToGoogle(feedback) : (await request('POST', feedback)).review;
+      if (googleScript) keepSent(saved);
+      else { notes.push(saved); renderNotes(); }
       form.hidden = true;
       setStatus('Feedback sent. Thank you!');
     } catch (error) {
@@ -392,7 +464,8 @@
               !anchor.selector || anchor.selector.length > 500) throw new Error('Invalid draft location.');
           return { page: anchor.page, selector: anchor.selector, quote: String(anchor.quote || '').slice(0, 300), label: String(anchor.label || '').slice(0, 150) };
         });
-        return { pending: true, message: draft.message.trim(), anchors: anchors,
+        return { pending: true, id: /^[0-9a-f-]{36}$/.test(draft.id || '') ? draft.id : crypto.randomUUID(),
+          message: draft.message.trim(), anchors: anchors,
           createdAt: typeof draft.createdAt === 'string' ? draft.createdAt : '',
           version: /^[0-9a-f]{40}$/.test(draft.version || '') ? draft.version : '' };
       });
@@ -409,5 +482,5 @@
   window.addEventListener('resize', renderNotes);
   window.addEventListener('load', renderNotes);
   renderNotes();
-  if (code) loadNotes();
+  if (code && !googleScript) loadNotes();
 })();

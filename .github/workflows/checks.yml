@@ -21,13 +21,15 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check feedback service
-        run: node --test feedback-worker/index.test.mjs
+        run: node --test feedback-worker/index.test.mjs google-feedback/Code.test.mjs
       - name: Check review build
         run: |
           node --check src/review.js
           python3 build.py --review
           test -f dist/review.js
           test -f dist/review-pages.json
+          GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/test-deployment/exec python3 build.py --review
+          grep -q 'data-google-script="https://script.google.com/macros/s/test-deployment/exec"' dist/index.html
       - name: Check production build excludes review tools
         run: |
           python3 build.py

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Feedback connection</title></head>
+<body>
+<script>
+  const allowedOrigin = <?!= JSON.stringify(allowedOrigin) ?>;
+  const source = 'discovery-review-bridge';
+  window.addEventListener('message', event => {
+    const data = event.data;
+    if (event.origin !== allowedOrigin || event.source !== window.top ||
+        !data || data.source !== 'discovery-review-page' || data.type !== 'submit' ||
+        !/^[0-9a-f-]{36}$/i.test(data.requestId || '')) return;
+    const requestId = data.requestId;
+    google.script.run
+      .withSuccessHandler(review => window.top.postMessage(
+        { source, type: 'result', requestId, ok: true, review }, allowedOrigin))
+      .withFailureHandler(error => window.top.postMessage(
+        { source, type: 'result', requestId, ok: false,
+          error: (error && error.message) || 'Google Sheets could not save this feedback.' }, allowedOrigin))
+      .submitFeedback(data.feedback, data.code);
+  });
+  window.top.postMessage({ source, type: 'ready' }, allowedOrigin);
+</script>
+</body>
+</html>

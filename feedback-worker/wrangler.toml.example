@@ -1,0 +1,8 @@
+name = "discovery-school-feedback"
+main = "index.mjs"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://timmybirds.github.io"
+SITE_BASE_URL = "https://timmybirds.github.io/discovery-school"
+GITHUB_REPO = "timmyBirds/discovery-school-feedback"

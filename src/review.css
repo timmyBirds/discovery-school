@@ -4,7 +4,6 @@
 .review-panel { position: fixed; z-index: 1001; right: 0; top: 0; bottom: 0; width: min(420px, 100vw); overflow: auto; background: #fff; border-left: 1px solid #d8e3e8; box-shadow: -8px 0 32px #09253b22; padding: 22px; }
 .review-panel[hidden], .review-form[hidden], .review-edit-form[hidden], .review-search[hidden], .review-connect[hidden] { display: none; }
 .review-head, .review-list-head, .review-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.review-list-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
 .review-head { padding-bottom: 14px; border-bottom: 1px solid #d8e3e8; }
 .review-head small { color: #0b4f7a; font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .review-head h2 { margin: 4px 0 0; font-size: 24px; line-height: 1.2; }
@@ -34,7 +33,7 @@
 .review-search-target { outline: 3px solid #f47b20 !important; outline-offset: 5px; scroll-margin: 24px; }
 .review-search-highlight { background: #ffe27a; color: #172b3b; padding: 0 2px; border-radius: 2px; }
 .review-form-actions { margin-top: 12px; }
-.review-cancel, .review-export, .review-import { border: 0; background: none; color: #0b4f7a; font: 700 13px system-ui; cursor: pointer; }
+.review-cancel { border: 0; background: none; color: #0b4f7a; font: 700 13px system-ui; cursor: pointer; }
 .review-submit:disabled { opacity: .6; cursor: wait; }
 .review-status { min-height: 1.5em; font-size: 13px; line-height: 1.4; color: #2e5f46; }
 .review-status.is-error { color: #a23f27; }
@@ -46,6 +45,9 @@
 .review-pending { color: #a85a00; font-size: 12px; }
 .review-draft-actions { display: flex; gap: 12px; margin-top: 6px; }
 .review-draft-actions button { border: 0; padding: 0; background: none; color: #0b4f7a; font: 700 12px system-ui; cursor: pointer; }
+.review-note-editor { margin: 8px 0; }
+.review-note-editor textarea { width: 100%; margin-bottom: 6px; }
+.review-note-editor button { border: 0; background: none; color: #0b4f7a; font: 700 12px system-ui; padding: 4px 12px 4px 0; cursor: pointer; }
 .review-choosing main { cursor: crosshair; }
 .review-hovered { outline: 3px solid #f47b20 !important; outline-offset: 3px; }
 .review-choosing main :focus-visible { outline: 3px solid #f47b20 !important; outline-offset: 3px; }

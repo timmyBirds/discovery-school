@@ -13,9 +13,9 @@ visitors. Edits do not change the repository's source files; remove this
 temporary feature and incorporate approved wording into `src/pages/` before
 the permanent site launches.
 
-The two drafts from the first local preview remain in that browser. Export them
-there and import the JSON file on the hosted review site. Importing never sends
-them automatically; use **Send draft** on each item after connecting.
+Unsent drafts stay in the browser where they were created. The reviewer can
+edit, delete, or retry them there. Submitted feedback can be edited or deleted
+from that same browser; its private random ID identifies the Sheet row.
 
 ## One-time Google setup
 
@@ -52,13 +52,11 @@ Google Drive connector in Codex is not needed.
 
 ## Review and tracking
 
-The Sheet contains **Status**, **Assigned to**, **Approved**, and **Notes**
-columns. A simple workflow is: New → In progress → Ready for review → Approved.
-The **Page URL**, selected text, element label, and related locations tell the
-implementer what to change. The **Location data** column keeps the exact page
-selectors for technical follow-up. A GitHub Issue is optional; the Sheet can
-be the work list. The two people can work in different time zones by updating
-the row's status and notes asynchronously.
+The Sheet puts the comment in the first **Feedback** column, followed by
+**Status**, page, section, selected text, assignee, approval, and notes. The
+random ID and location data are hidden at the right. A simple workflow is:
+New → In progress → Ready for review → Approved. A GitHub Issue is optional;
+the Sheet can be the work list.
 
 After a confirmed save, the reviewer's browser keeps its own sent pins. Google
 Sheets is the shared source of truth; submitted pins from other browsers are

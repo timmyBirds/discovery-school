@@ -18,6 +18,7 @@
         { source, type: 'result', requestId, ok: false,
           error: (error && error.message) || 'Google Sheets could not save this feedback.' }, allowedOrigin))
     if (data.type === 'submit') runner.submitFeedback(data.feedback);
+    else if (data.type === 'feedback-change') runner.changeFeedback(data.change);
     else if (data.type === 'content-list') runner.publishedContent();
     else if (data.type === 'content-publish') runner.publishContent(data.edit);
   });

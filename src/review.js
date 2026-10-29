@@ -44,7 +44,7 @@
         '<div class="review-form-actions"><button type="button" class="review-cancel">Cancel</button><button type="submit" class="review-submit">Submit feedback</button></div>' +
       '</form>' +
       '<p class="review-status" role="status" aria-live="polite"></p>' +
-      '<div class="review-list-head"><h3>Feedback</h3><div class="review-list-actions"><button type="button" class="review-import">Import drafts</button><button type="button" class="review-export">Export drafts</button><input type="file" class="review-import-file" accept=".json,application/json" hidden></div></div>' +
+      '<div class="review-list-head"><h3>Feedback</h3></div>' +
       '<div class="review-list"></div>' +
     '</aside>';
   document.body.appendChild(ui);
@@ -155,6 +155,11 @@
   function keepSent(review) {
     if (!notes.some(function (note) { return note.id === review.id; })) notes.push(review);
     try { localStorage.setItem(sentKey, JSON.stringify(notes)); } catch (error) { /* Sheet already saved it. */ }
+    renderNotes();
+  }
+
+  function saveSentNotes() {
+    localStorage.setItem(sentKey, JSON.stringify(notes));
     renderNotes();
   }
 
@@ -360,16 +365,13 @@
           });
           actions.appendChild(retry);
         }
-        var remove = document.createElement('button');
-        remove.type = 'button';
-        remove.textContent = 'Delete draft';
-        remove.addEventListener('click', function () {
-          drafts.splice(drafts.indexOf(note), 1);
-          saveDrafts();
-          setStatus('Draft deleted.');
-        });
-        actions.appendChild(remove);
+        addChangeActions(note, actions, item);
         item.appendChild(actions);
+      } else if (googleScript) {
+        var sentActions = document.createElement('div');
+        sentActions.className = 'review-draft-actions';
+        addChangeActions(note, sentActions, item);
+        item.appendChild(sentActions);
       }
       noteList.appendChild(item);
       note.anchors.filter(function (a) { return a.page === page; }).forEach(function (anchor) {
@@ -388,6 +390,60 @@
         pin.style.left = Math.min(document.documentElement.scrollWidth - 36, rect.right + scrollX - 25) + 'px';
       });
     });
+  }
+
+  function addChangeActions(note, actions, item) {
+    var edit = document.createElement('button');
+    edit.type = 'button';
+    edit.textContent = 'Edit';
+    edit.addEventListener('click', function () {
+      var editor = document.createElement('div');
+      editor.className = 'review-note-editor';
+      var field = document.createElement('textarea');
+      field.value = note.message;
+      field.maxLength = 4000;
+      field.rows = 4;
+      var save = document.createElement('button');
+      save.type = 'button';
+      save.textContent = 'Save';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', function () { editor.remove(); });
+      save.addEventListener('click', async function () {
+        var message = field.value.trim();
+        if (!message) return setStatus('Feedback cannot be empty.', true);
+        save.disabled = true;
+        try {
+          if (!note.pending) await callGoogle('feedback-change', { change: { id: note.id, action: 'edit', message: message } });
+          note.message = message;
+          if (note.pending) saveDrafts();
+          else saveSentNotes();
+          setStatus('Feedback updated.');
+        } catch (error) { save.disabled = false; setStatus(error.message, true); }
+      });
+      editor.append(field, save, cancel);
+      item.appendChild(editor);
+      field.focus();
+      edit.disabled = true;
+      cancel.addEventListener('click', function () { edit.disabled = false; });
+    });
+    var remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = 'Delete';
+    remove.addEventListener('click', async function () {
+      if (!window.confirm('Delete this feedback?')) return;
+      remove.disabled = true;
+      try {
+        if (!note.pending) await callGoogle('feedback-change', { change: { id: note.id, action: 'delete' } });
+        var list = note.pending ? drafts : notes;
+        list.splice(list.indexOf(note), 1);
+        if (note.pending) saveDrafts();
+        else saveSentNotes();
+        setStatus('Feedback deleted.');
+      } catch (error) { remove.disabled = false; setStatus(error.message, true); }
+    });
+    actions.append(edit, remove);
   }
 
   async function request(method, body) {
@@ -554,7 +610,7 @@
     if (!api && !googleScript) {
       drafts.push(Object.assign({ pending: true }, feedback));
       saveDrafts();
-      setStatus('Draft saved in this browser. Export it to share.');
+      setStatus('Draft saved in this browser. Send it when the feedback service is connected.');
       form.hidden = true;
       return;
     }
@@ -574,49 +630,6 @@
     } finally { submit.disabled = false; }
   });
 
-  ui.querySelector('.review-export').addEventListener('click', function () {
-    if (!drafts.length) return setStatus('There are no drafts to export.');
-    var blob = new Blob([JSON.stringify(drafts, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
-    link.href = url;
-    link.download = 'discovery-feedback-drafts.json';
-    link.click();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-  });
-  var importFile = ui.querySelector('.review-import-file');
-  ui.querySelector('.review-import').addEventListener('click', function () { importFile.click(); });
-  importFile.addEventListener('change', async function () {
-    var file = importFile.files[0];
-    importFile.value = '';
-    if (!file) return;
-    if (file.size > 1000000) return setStatus('Draft file is too large.', true);
-    try {
-      var imported = JSON.parse(await file.text());
-      if (!Array.isArray(imported) || !imported.length || imported.length > 100) throw new Error('Expected 1 to 100 drafts.');
-      imported = imported.map(function (draft) {
-        if (!draft || typeof draft.message !== 'string' || !draft.message.trim() || draft.message.length > 4000 ||
-            !Array.isArray(draft.anchors) || !draft.anchors.length || draft.anchors.length > 100) throw new Error('Invalid feedback draft.');
-        var anchors = draft.anchors.map(function (anchor) {
-          if (!anchor || !/^[a-z0-9-]+\.html$/.test(anchor.page) || typeof anchor.selector !== 'string' ||
-              !anchor.selector || anchor.selector.length > 500) throw new Error('Invalid draft location.');
-          return { page: anchor.page, selector: anchor.selector, quote: String(anchor.quote || '').slice(0, 300), label: String(anchor.label || '').slice(0, 150) };
-        });
-        return { pending: true, id: /^[0-9a-f-]{36}$/.test(draft.id || '') ? draft.id : crypto.randomUUID(),
-          message: draft.message.trim(), anchors: anchors,
-          createdAt: typeof draft.createdAt === 'string' ? draft.createdAt : '',
-          version: /^[0-9a-f]{40}$/.test(draft.version || '') ? draft.version : '' };
-      });
-      var known = new Set(drafts.map(function (draft) { return draft.message + JSON.stringify(draft.anchors); }));
-      var added = 0;
-      imported.forEach(function (draft) {
-        var key = draft.message + JSON.stringify(draft.anchors);
-        if (!known.has(key)) { drafts.push(draft); known.add(key); added++; }
-      });
-      if (added) saveDrafts();
-      setStatus(added ? added + ' draft' + (added === 1 ? '' : 's') + ' imported. Send each draft when ready.' : 'All drafts are already here.');
-    } catch (error) { setStatus('Could not import drafts: ' + error.message, true); }
-  });
   window.addEventListener('resize', renderNotes);
   window.addEventListener('load', renderNotes);
   renderNotes();

@@ -2,9 +2,9 @@
 const FEEDBACK_SHEET = 'Feedback';
 const CONTENT_SHEET = 'Published Content';
 const HEADERS = [
-  'ID', 'Submitted (UTC)', 'Status', 'Assigned to', 'Page URL',
-  'Selected text', 'Element', 'Feedback', 'Related locations',
-  'Location data', 'Site version', 'Approved', 'Notes'
+  'Feedback', 'Status', 'Page URL', 'Section', 'Selected text',
+  'Submitted (UTC)', 'Assigned to', 'Approved', 'Notes',
+  'Related locations', 'ID', 'Location data', 'Site version'
 ];
 
 function setupFeedback() {
@@ -41,7 +41,7 @@ function submitFeedback(raw) {
   try {
     const sheet = feedbackSheet_(SpreadsheetApp.openById(spreadsheetId));
     if (sheet.getLastRow() > 1) {
-      const existing = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1)
+      const existing = sheet.getRange(2, 11, sheet.getLastRow() - 1, 1)
         .createTextFinder(review.id).matchEntireCell(true).findNext();
       if (existing) return review; // A retry after a lost receipt must not create a second row.
     }
@@ -50,15 +50,41 @@ function submitFeedback(raw) {
       anchor.page + ' — ' + anchor.label + (anchor.quote ? ' ["' + anchor.quote + '"]' : '')
     ).join('\n');
     sheet.appendRow([
-      review.id, new Date().toISOString(), 'New', '',
+      safeCell_(review.message), 'New',
       'https://timmybirds.github.io/discovery-school/' + first.page,
-      safeCell_(first.quote), safeCell_(first.label), safeCell_(review.message),
-      safeCell_(related), safeCell_(JSON.stringify(review.anchors)), review.version, '', ''
+      safeCell_(first.label), safeCell_(first.quote), new Date().toISOString(),
+      '', '', '', safeCell_(related), review.id,
+      safeCell_(JSON.stringify(review.anchors)), review.version
     ]);
     return review;
   } finally {
     lock.releaseLock();
   }
+}
+
+function changeFeedback(raw) {
+  const id = String((raw || {}).id || '');
+  const action = String((raw || {}).action || '');
+  const message = String((raw || {}).message || '').trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||
+      !['edit', 'delete'].includes(action) ||
+      (action === 'edit' && (!message || message.length > 4000))) {
+    throw new Error('Invalid feedback change.');
+  }
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!spreadsheetId) throw new Error('The feedback spreadsheet has not been set up.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = feedbackSheet_(SpreadsheetApp.openById(spreadsheetId));
+    if (sheet.getLastRow() < 2) throw new Error('Feedback was not found.');
+    const cell = sheet.getRange(2, 11, sheet.getLastRow() - 1, 1)
+      .createTextFinder(id).matchEntireCell(true).findNext();
+    if (!cell) throw new Error('Feedback was not found.');
+    if (action === 'delete') sheet.deleteRow(cell.getRow());
+    else sheet.getRange(cell.getRow(), 1).setValue(safeCell_(message));
+    return { id: id, action: action, message: message };
+  } finally { lock.releaseLock(); }
 }
 
 function publishedContent() {
@@ -109,14 +135,31 @@ function publishContent(raw) {
 
 function feedbackSheet_(spreadsheet) {
   const sheet = spreadsheet.getSheetByName(FEEDBACK_SHEET) || spreadsheet.insertSheet(FEEDBACK_SHEET);
+  if (sheet.getLastRow() && sheet.getRange(1, 1).getValue() === 'ID') {
+    const old = sheet.getDataRange().getValues();
+    const migrated = old.slice(1).map(row => [
+      row[7], row[2], row[4], row[6], row[5], row[1], row[3], row[11], row[12],
+      row[8], row[0], row[9], row[10]
+    ]);
+    sheet.getRange(1, 1, old.length, HEADERS.length).clearDataValidations();
+    sheet.getRange(1, 1, old.length, HEADERS.length).setValues([HEADERS].concat(migrated));
+  }
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(HEADERS);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
-    const statuses = ['New', 'In progress', 'Ready for review', 'Approved'];
-    const rule = SpreadsheetApp.newDataValidation().requireValueInList(statuses, true).build();
-    sheet.getRange(2, 3, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
   }
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+  sheet.getRange(1, 1, sheet.getMaxRows(), 2).setWrap(true);
+  sheet.setColumnWidth(1, 480);
+  sheet.setColumnWidth(2, 145);
+  sheet.setColumnWidth(3, 300);
+  sheet.setColumnWidth(4, 220);
+  const statuses = ['New', 'In progress', 'Ready for review', 'Approved'];
+  const rule = SpreadsheetApp.newDataValidation().requireValueInList(statuses, true).build();
+  sheet.getRange(2, 2, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
+  sheet.hideColumns(11, 3);
   return sheet;
 }
 

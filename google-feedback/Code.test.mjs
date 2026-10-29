@@ -15,13 +15,23 @@ function fixture() {
     getMaxRows: () => 1000,
     appendRow: row => rows.push(row),
     setFrozenRows: () => {},
-    getRange: (row, col, count) => row === 1 ? { setFontWeight: () => {} } : row === 2 && col === 3 ? {
-      setDataValidation: rule => { statusChoices = rule; }
-    } : {
+    setColumnWidth: () => {},
+    hideColumns: () => {},
+    deleteRow: row => rows.splice(row - 1, 1),
+    getDataRange: () => ({ getValues: () => rows.map(row => row.slice()) }),
+    getRange: (row, col) => ({
+      getValue: () => rows[row - 1]?.[col - 1],
+      setValue: value => { rows[row - 1][col - 1] = value; },
+      setValues: values => values.forEach((value, index) => { rows[row - 1 + index] = value; }),
+      setFontWeight: () => {}, setWrap: () => {}, clearDataValidations: () => {},
+      setDataValidation: rule => { if (col === 2) statusChoices = rule; },
       createTextFinder: value => ({ matchEntireCell: () => ({
-        findNext: () => rows.slice(1).find(entry => entry[0] === value) || null
+        findNext: () => {
+          const index = rows.findIndex((entry, index) => index > 0 && entry[col - 1] === value);
+          return index < 0 ? null : { getRow: () => index + 1 };
+        }
       }) })
-    }
+    })
   };
   const spreadsheet = {
     getId: () => 'sheet-id',
@@ -74,9 +84,9 @@ test('sets up a private Sheet and stores one row per feedback ID', () => {
   context.submitFeedback(review());
   context.submitFeedback(review());
   assert.equal(rows.length, 2);
-  assert.equal(rows[1][2], 'New');
-  assert.equal(rows[1][4], 'https://timmybirds.github.io/discovery-school/index.html');
-  assert.equal(rows[1][7], 'Change this wording');
+  assert.equal(rows[1][1], 'New');
+  assert.equal(rows[1][2], 'https://timmybirds.github.io/discovery-school/index.html');
+  assert.equal(rows[1][0], 'Change this wording');
 });
 
 test('rejects invalid locations and safely stores formula-like feedback', () => {
@@ -85,7 +95,29 @@ test('rejects invalid locations and safely stores formula-like feedback', () => 
     /Invalid page location/);
   assert.equal(rows.length, 1);
   context.submitFeedback(review({ message: '=IMPORTDATA("bad")' }));
-  assert.equal(rows[1][7], "'=IMPORTDATA(\"bad\")");
+  assert.equal(rows[1][0], "'=IMPORTDATA(\"bad\")");
+});
+
+test('edits and deletes the feedback row identified by its private ID', () => {
+  const { context, rows } = fixture();
+  context.submitFeedback(review());
+  context.changeFeedback({ id, action: 'edit', message: 'Better wording' });
+  assert.equal(rows[1][0], 'Better wording');
+  context.changeFeedback({ id, action: 'delete' });
+  assert.equal(rows.length, 1);
+});
+
+test('moves existing feedback to the first column without losing its row', () => {
+  const { context, rows } = fixture();
+  rows[0] = ['ID', 'Submitted (UTC)', 'Status', 'Assigned to', 'Page URL',
+    'Selected text', 'Element', 'Feedback', 'Related locations', 'Location data',
+    'Site version', 'Approved', 'Notes'];
+  rows.push([id, '2026-10-29', 'New', '', 'https://example.test', 'Hello', 'Welcome',
+    'Existing comment', '', '[]', '', '', '']);
+  context.setupFeedback();
+  assert.equal(rows[0][0], 'Feedback');
+  assert.equal(rows[1][0], 'Existing comment');
+  assert.equal(rows[1][10], id);
 });
 
 test('serves the bridge only to an allowed parent origin', () => {

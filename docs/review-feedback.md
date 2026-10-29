@@ -6,6 +6,13 @@ is saved as a row in a private Google Sheet. The reviewer does not need email,
 a Google account, or a GitHub account. The site keeps a browser-local draft if
 Google does not confirm the save.
 
+On the temporary review site, **Edit page content** lets any visitor replace
+text or an image URL and publish it immediately. Published values are stored in
+the private Sheet's **Published Content** tab and loaded by review pages for all
+visitors. Edits do not change the repository's source files; remove this
+temporary feature and incorporate approved wording into `src/pages/` before
+the permanent site launches.
+
 The two drafts from the first local preview remain in that browser. Export them
 there and import the JSON file on the hosted review site. Importing never sends
 them automatically; use **Send draft** on each item after connecting.

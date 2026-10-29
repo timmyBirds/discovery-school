@@ -8,16 +8,18 @@
   window.addEventListener('message', event => {
     const data = event.data;
     if (event.origin !== allowedOrigin || event.source !== window.top ||
-        !data || data.source !== 'discovery-review-page' || data.type !== 'submit' ||
+        !data || data.source !== 'discovery-review-page' ||
         !/^[0-9a-f-]{36}$/i.test(data.requestId || '')) return;
     const requestId = data.requestId;
-    google.script.run
-      .withSuccessHandler(review => window.top.postMessage(
-        { source, type: 'result', requestId, ok: true, review }, allowedOrigin))
+    const runner = google.script.run
+      .withSuccessHandler(result => window.top.postMessage(
+        { source, type: 'result', requestId, ok: true, result }, allowedOrigin))
       .withFailureHandler(error => window.top.postMessage(
         { source, type: 'result', requestId, ok: false,
           error: (error && error.message) || 'Google Sheets could not save this feedback.' }, allowedOrigin))
-      .submitFeedback(data.feedback);
+    if (data.type === 'submit') runner.submitFeedback(data.feedback);
+    else if (data.type === 'content-list') runner.publishedContent();
+    else if (data.type === 'content-publish') runner.publishContent(data.edit);
   });
   window.top.postMessage({ source, type: 'ready' }, allowedOrigin);
 </script>

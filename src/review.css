@@ -2,7 +2,7 @@
 #review-ui * { box-sizing: border-box; }
 .review-launch { position: fixed; right: 20px; bottom: 20px; z-index: 1000; border: 0; border-radius: 6px; background: #f47b20; color: #fff; font: 700 15px system-ui; padding: 13px 18px; box-shadow: 0 6px 24px #09253b44; cursor: pointer; }
 .review-panel { position: fixed; z-index: 1001; right: 0; top: 0; bottom: 0; width: min(420px, 100vw); overflow: auto; background: #fff; border-left: 1px solid #d8e3e8; box-shadow: -8px 0 32px #09253b22; padding: 22px; }
-.review-panel[hidden], .review-form[hidden], .review-search[hidden], .review-connect[hidden] { display: none; }
+.review-panel[hidden], .review-form[hidden], .review-edit-form[hidden], .review-search[hidden], .review-connect[hidden] { display: none; }
 .review-head, .review-list-head, .review-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .review-list-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
 .review-head { padding-bottom: 14px; border-bottom: 1px solid #d8e3e8; }
@@ -16,6 +16,10 @@
 .review-code-row { display: flex; gap: 7px; margin-top: 7px; }
 .review-code-row button, .review-pick, .review-submit { border: 0; border-radius: 5px; background: #0b4f7a; color: #fff; padding: 10px 13px; font: 700 13px system-ui; cursor: pointer; white-space: nowrap; }
 .review-pick { width: 100%; margin: 18px 0; }
+.review-edit-pick { width: 100%; margin: -8px 0 18px; border: 1px solid #0b4f7a; border-radius: 5px; background: #fff; color: #0b4f7a; padding: 10px 13px; font: 700 13px system-ui; cursor: pointer; }
+.review-edit-form label { display: block; margin: 12px 0 6px; }
+.review-edit-help { color: #526576; font-size: 12px; line-height: 1.4; }
+.review-edit-cancel { border: 0; background: none; color: #0b4f7a; font: 700 13px system-ui; cursor: pointer; }
 .review-target { background: #eaf5fa; border-left: 3px solid #0b4f7a; padding: 9px 11px; margin-bottom: 14px; font-size: 13px; line-height: 1.45; max-height: 90px; overflow: auto; }
 .review-form fieldset { border: 0; padding: 14px 0 8px; margin: 0; }
 .review-form fieldset label { display: block; font-weight: 500; margin: 9px 0; }

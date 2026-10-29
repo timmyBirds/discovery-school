@@ -1,5 +1,6 @@
 // Bind this script to the feedback spreadsheet, then run setupFeedback once.
 const FEEDBACK_SHEET = 'Feedback';
+const CONTENT_SHEET = 'Published Content';
 const HEADERS = [
   'ID', 'Submitted (UTC)', 'Status', 'Assigned to', 'Page URL',
   'Selected text', 'Element', 'Feedback', 'Related locations',
@@ -55,6 +56,52 @@ function submitFeedback(raw) {
       safeCell_(related), safeCell_(JSON.stringify(review.anchors)), review.version, '', ''
     ]);
     return review;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function publishedContent() {
+  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!id) throw new Error('The spreadsheet has not been set up.');
+  const sheet = SpreadsheetApp.openById(id).getSheetByName(CONTENT_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 5).getValues()
+    .map(row => ({ page: row[0], selector: row[1], kind: row[2],
+      value: String(row[3]).replace(/^'(?=[=+\-@])/, '') }));
+}
+
+function publishContent(raw) {
+  const properties = PropertiesService.getScriptProperties();
+  if (!raw) throw new Error('Invalid content edit.');
+  const page = String(raw.page || '');
+  const selector = String(raw.selector || '');
+  const kind = String(raw.kind || '');
+  const value = String(raw.value || '').trim();
+  if (!/^[a-z0-9-]+\.html$/.test(page) || !selector || selector.length > 500 ||
+      !['text', 'image'].includes(kind) || !value || value.length > 5000) {
+    throw new Error('Invalid content edit.');
+  }
+  if (kind === 'image' && !/^https:\/\/[^\s]+$/.test(value)) {
+    throw new Error('Image URL must start with https://');
+  }
+  const id = properties.getProperty('SPREADSHEET_ID');
+  if (!id) throw new Error('The spreadsheet has not been set up.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = SpreadsheetApp.openById(id).getSheetByName(CONTENT_SHEET) ||
+      SpreadsheetApp.openById(id).insertSheet(CONTENT_SHEET);
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['Page', 'Selector', 'Kind', 'Published content', 'Updated (UTC)']);
+      sheet.setFrozenRows(1);
+    }
+    const rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues() : [];
+    const index = rows.findIndex(row => row[0] === page && row[1] === selector && row[2] === kind);
+    const data = [page, selector, kind, safeCell_(value), new Date().toISOString()];
+    if (index >= 0) sheet.getRange(index + 2, 1, 1, 5).setValues([data]);
+    else sheet.appendRow(data);
+    return { page, selector, kind, value };
   } finally {
     lock.releaseLock();
   }

@@ -21,7 +21,7 @@
   var focusTargets = [];
   var lastQuote = '';
   var activeHighlights = [];
-  var activeHighlights = [];
+  var navigationKey = 'discovery-review-navigation-v1';
 
   var ui = document.createElement('div');
   ui.id = 'review-ui';
@@ -200,6 +200,15 @@
 
   function revealMatch(anchor) {
     if (anchor.page !== page) {
+      sessionStorage.setItem(navigationKey, JSON.stringify({
+        selected: selected,
+        message: ui.querySelector('#review-comment').value,
+        terms: ui.querySelector('#review-terms').value,
+        matches: matches,
+        checked: Array.from(matchList.querySelectorAll('input:checked')).map(function (input) { return Number(input.value); }),
+        panelScroll: panel.scrollTop,
+        listScroll: matchList.scrollTop
+      }));
       location.href = anchor.page + '?reviewMatch=' + encodeURIComponent(anchor.selector) + '&reviewTerms=' + encodeURIComponent(ui.querySelector('#review-terms').value);
       return;
     }
@@ -249,7 +258,7 @@
     matchList.replaceChildren();
     ui.querySelector('.review-target').textContent = page + ' · ' + selected.label;
     var language = /english|french|kirundi|trilingual|3 languages/i.test(selected.label);
-    ui.querySelector('#review-terms').value = language ? 'English, French, Kirundi, trilingual, 3 languages' : (quote || selected.label).slice(0, 70);
+    ui.querySelector('#review-terms').value = language ? 'English, French, Kirundi' : (quote || selected.label).slice(0, 70);
     setPanel(true);
     ui.querySelector('#review-comment').focus();
   }
@@ -415,6 +424,24 @@
   });
   ui.querySelector('.review-cancel').addEventListener('click', function () { form.hidden = true; selected = null; });
 
+  function renderMatches(checked) {
+    matchList.replaceChildren();
+    matches.forEach(function (anchor, index) {
+      var label = document.createElement('label');
+      var check = document.createElement('input');
+      check.type = 'checkbox';
+      check.value = String(index);
+      check.checked = checked.includes(index);
+      var link = document.createElement('button');
+      link.type = 'button';
+      link.className = 'review-match-open';
+      link.textContent = anchor.page + ' · ' + anchor.label;
+      link.addEventListener('click', function () { revealMatch(anchor); });
+      label.append(check, link);
+      matchList.appendChild(label);
+    });
+  }
+
   ui.querySelector('.review-find').addEventListener('click', async function () {
     var terms = ui.querySelector('#review-terms').value.split(',').map(function (t) { return t.trim().toLowerCase(); }).filter(function (t) { return t.length > 2; }).slice(0, 8);
     if (!terms.length) return setStatus('Enter at least one search term.', true);
@@ -435,21 +462,8 @@
         });
       });
       matches = matches.slice(0, 100);
-      matches.forEach(function (anchor, index) {
-        var label = document.createElement('label');
-        var check = document.createElement('input');
-        check.type = 'checkbox';
-        check.value = String(index);
-        check.checked = false;
-        var link = document.createElement('button');
-        link.type = 'button';
-        link.className = 'review-match-open';
-        link.textContent = anchor.page + ' · ' + anchor.label;
-        link.addEventListener('click', function () { revealMatch(anchor); });
-        label.append(check, link);
-        matchList.appendChild(label);
-      });
-      setStatus(matches.length + ' matching passages found. Uncheck any that do not apply.');
+      renderMatches([]);
+      setStatus(matches.length + ' matching passages found. Open each passage, then check those that apply.');
     } catch (error) { setStatus('Could not search the site. Try again.', true); }
   });
 
@@ -540,7 +554,26 @@
   var reviewParams = new URLSearchParams(location.search);
   var requestedSelector = reviewParams.get('reviewMatch');
   if (requestedSelector) {
-    ui.querySelector('#review-terms').value = reviewParams.get('reviewTerms') || '';
+    var savedNavigation = sessionStorage.getItem(navigationKey);
+    sessionStorage.removeItem(navigationKey);
+    if (savedNavigation) {
+      try {
+        var restored = JSON.parse(savedNavigation);
+        selected = restored.selected;
+        matches = restored.matches || [];
+        form.hidden = false;
+        search.hidden = false;
+        ui.querySelector('input[name="review-scope"][value="related"]').checked = true;
+        ui.querySelector('#review-comment').value = restored.message || '';
+        ui.querySelector('#review-terms').value = restored.terms || '';
+        ui.querySelector('.review-target').textContent = selected.page + ' · ' + selected.label;
+        renderMatches(restored.checked || []);
+        panel.scrollTop = restored.panelScroll || 0;
+        matchList.scrollTop = restored.listScroll || 0;
+      } catch (error) { setStatus('Could not restore the feedback form.', true); }
+    } else {
+      ui.querySelector('#review-terms').value = reviewParams.get('reviewTerms') || '';
+    }
     setPanel(true);
     window.setTimeout(function () {
       try {
@@ -548,6 +581,7 @@
         if (destination) revealMatch(anchorFor(destination, page, ''));
         else setStatus('That passage could not be located on this page.', true);
       } catch (error) { setStatus('That passage could not be located on this page.', true); }
+      history.replaceState(null, '', location.pathname + location.hash);
     }, 150);
   }
   if (code && !googleScript) loadNotes();

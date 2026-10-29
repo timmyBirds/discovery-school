@@ -20,6 +20,8 @@
   var hovered = null;
   var focusTargets = [];
   var lastQuote = '';
+  var activeHighlights = [];
+  var activeHighlights = [];
 
   var ui = document.createElement('div');
   ui.id = 'review-ui';
@@ -184,6 +186,55 @@
     var img = el.matches('img') ? el : el.querySelector('img');
     var text = (el.innerText || el.textContent || img && img.alt || '').trim().replace(/\s+/g, ' ');
     return { page: file, selector: selectorFor(el), quote: quote || '', label: (text || img && img.alt || el.tagName.toLowerCase()).slice(0, 150) };
+  }
+
+  function clearSearchHighlights() {
+    activeHighlights.forEach(function (mark) {
+      var parent = mark.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(mark.textContent), mark);
+      parent.normalize();
+    });
+    activeHighlights = [];
+  }
+
+  function revealMatch(anchor) {
+    if (anchor.page !== page) {
+      location.href = anchor.page + '?reviewMatch=' + encodeURIComponent(anchor.selector) + '&reviewTerms=' + encodeURIComponent(ui.querySelector('#review-terms').value);
+      return;
+    }
+    var target;
+    try { target = document.querySelector(anchor.selector); } catch (error) { target = null; }
+    if (!target) return setStatus('That passage could not be located on this page.', true);
+    clearSearchHighlights();
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('review-search-target');
+    window.setTimeout(function () { target.classList.remove('review-search-target'); }, 3500);
+    var terms = ui.querySelector('#review-terms').value.split(',').map(function (term) { return term.trim(); }).filter(Boolean);
+    var pattern = new RegExp(terms.slice().sort(function (a, b) { return b.length - a.length; }).map(function (term) { return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|'), 'gi');
+    var walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, { acceptNode: function (node) { return node.parentElement && !node.parentElement.closest('#review-ui,script,style,mark') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; } });
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (node) {
+      var text = node.nodeValue;
+      if (!pattern.test(text)) { pattern.lastIndex = 0; return; }
+      pattern.lastIndex = 0;
+      var fragment = document.createDocumentFragment();
+      var last = 0;
+      text.replace(pattern, function (match, offset) {
+        fragment.appendChild(document.createTextNode(text.slice(last, offset)));
+        var mark = document.createElement('mark');
+        mark.className = 'review-search-highlight';
+        mark.textContent = match;
+        fragment.appendChild(mark);
+        activeHighlights.push(mark);
+        last = offset + match.length;
+        return match;
+      });
+      fragment.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(fragment, node);
+    });
+    setStatus(activeHighlights.length ? 'Highlighted the matching text in this passage.' : 'Passage opened; none of the search terms appear in its visible text.');
   }
 
   function beginForm(el, quote) {
@@ -377,7 +428,8 @@
         var doc = new DOMParser().parseFromString(htmls[index], 'text/html');
         doc.querySelectorAll('main p, main h1, main h2, main h3, main li, main figcaption').forEach(function (el) {
           var text = (el.textContent || '').trim().replace(/\s+/g, ' ');
-          if (text && terms.some(function (term) { return text.toLowerCase().includes(term); })) {
+          var normalized = text.toLowerCase();
+          if (text && terms.every(function (term) { return normalized.includes(term); })) {
             matches.push(anchorFor(el, file, ''));
           }
         });
@@ -388,10 +440,13 @@
         var check = document.createElement('input');
         check.type = 'checkbox';
         check.value = String(index);
-        check.checked = true;
-        var span = document.createElement('span');
-        span.textContent = anchor.page + ' · ' + anchor.label;
-        label.append(check, span);
+        check.checked = false;
+        var link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'review-match-open';
+        link.textContent = anchor.page + ' · ' + anchor.label;
+        link.addEventListener('click', function () { revealMatch(anchor); });
+        label.append(check, link);
         matchList.appendChild(label);
       });
       setStatus(matches.length + ' matching passages found. Uncheck any that do not apply.');
@@ -482,5 +537,18 @@
   window.addEventListener('resize', renderNotes);
   window.addEventListener('load', renderNotes);
   renderNotes();
+  var reviewParams = new URLSearchParams(location.search);
+  var requestedSelector = reviewParams.get('reviewMatch');
+  if (requestedSelector) {
+    ui.querySelector('#review-terms').value = reviewParams.get('reviewTerms') || '';
+    setPanel(true);
+    window.setTimeout(function () {
+      try {
+        var destination = document.querySelector(requestedSelector);
+        if (destination) revealMatch(anchorFor(destination, page, ''));
+        else setStatus('That passage could not be located on this page.', true);
+      } catch (error) { setStatus('That passage could not be located on this page.', true); }
+    }, 150);
+  }
   if (code && !googleScript) loadNotes();
 })();

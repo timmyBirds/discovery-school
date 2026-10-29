@@ -44,7 +44,7 @@
         '<div class="review-form-actions"><button type="button" class="review-cancel">Cancel</button><button type="submit" class="review-submit">Submit feedback</button></div>' +
       '</form>' +
       '<p class="review-status" role="status" aria-live="polite"></p>' +
-      '<div class="review-list-head"><h3>Feedback</h3></div>' +
+      '<div class="review-list-head"><h3>Your feedback in this browser</h3></div>' +
       '<div class="review-list"></div>' +
     '</aside>';
   document.body.appendChild(ui);
@@ -329,7 +329,7 @@
     if (!allNotes().length) {
       var empty = document.createElement('p');
       empty.className = 'review-empty';
-      empty.textContent = 'No feedback yet.';
+      empty.textContent = 'No feedback saved in this browser yet.';
       noteList.appendChild(empty);
     }
     allNotes().forEach(function (note) {

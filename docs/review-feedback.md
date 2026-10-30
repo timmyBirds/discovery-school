@@ -6,8 +6,9 @@ is saved as a row in a private Google Sheet. The reviewer does not need email,
 a Google account, or a GitHub account. The site keeps a browser-local draft if
 Google does not confirm the save.
 
-On the temporary review site, **Edit page content** lets any visitor replace
-text or an image URL and publish it immediately. Published values are stored in
+On the temporary review site, **Edit page text** lets any visitor replace
+text and publish it immediately. Images can be selected for feedback, but cannot
+be replaced by the editor. Published text is stored in
 the private Sheet's **Published Content** tab and loaded by review pages for all
 visitors. Edits do not change the repository's source files; remove this
 temporary feature and incorporate approved wording into `src/pages/` before
@@ -16,6 +17,8 @@ the permanent site launches.
 Unsent drafts stay in the browser where they were created. The reviewer can
 edit, delete, or retry them there. Submitted feedback can be edited or deleted
 from that same browser; its private random ID identifies the Sheet row.
+Tabs in the same browser sync their saved feedback. If a Sheet row has already
+been removed, deleting the remaining browser copy clears that stale item.
 
 ## One-time Google setup
 
@@ -72,7 +75,10 @@ comments.
   `REVIEW_API_URL` repository variable is set. Both must not be set together.
 - A review build without a storage URL can save only browser-local drafts.
 - To test against the Google script from localhost, add the exact localhost
-  origin to its `ALLOWED_ORIGINS` Script Property, separated by a comma.
+  origin to its `ALLOWED_ORIGINS` Script Property, separated by a comma. With
+  the Google script configured, local feedback goes to the Sheet while local
+  text edits remain visible only in that browser. Unsent drafts can be retried
+  with **Send draft** after the connection is ready.
 
 The current GitHub Pages URL is the review environment once the variable is
 set. A separate deployment is needed if the final production site and review

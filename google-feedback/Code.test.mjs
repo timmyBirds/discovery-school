@@ -105,6 +105,9 @@ test('edits and deletes the feedback row identified by its private ID', () => {
   assert.equal(rows[1][0], 'Better wording');
   context.changeFeedback({ id, action: 'delete' });
   assert.equal(rows.length, 1);
+  assert.equal(context.changeFeedback({ id, action: 'delete' }).alreadyDeleted, true);
+  assert.throws(() => context.changeFeedback({ id, action: 'edit', message: 'Again' }),
+    /Feedback was not found/);
 });
 
 test('moves existing feedback to the first column without losing its row', () => {

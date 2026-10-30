@@ -40,7 +40,7 @@
 .review-list-head { border-top: 1px solid #d8e3e8; margin-top: 18px; padding-top: 10px; }
 .review-list-head h3 { margin: 0; font-size: 16px; }
 .review-note { border-bottom: 1px solid #e4ebef; padding: 12px 0; }
-.review-note small { color: #5f7283; }
+.review-note small { display: block; color: #5f7283; overflow-wrap: anywhere; }
 .review-note p { margin: 5px 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
 .review-pending { color: #a85a00; font-size: 12px; }
 .review-draft-actions { display: flex; gap: 12px; margin-top: 6px; }

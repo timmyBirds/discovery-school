@@ -2,6 +2,7 @@
   var script = document.currentScript;
   var api = (script && script.dataset.api) || '';
   var googleScript = (script && script.dataset.googleScript) || '';
+  var localPreview = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   var version = (script && script.dataset.version) || '';
   var page = location.pathname.split('/').pop() || 'index.html';
   var storageKey = 'discovery-review-drafts-v1';
@@ -9,6 +10,7 @@
   var code = api ? sessionStorage.getItem(codeKey) || '' : '';
   var drafts = JSON.parse(localStorage.getItem(storageKey) || '[]');
   var sentKey = 'discovery-review-sent-v1';
+  var localContentKey = 'discovery-review-local-content-v1';
   var notes = googleScript ? JSON.parse(localStorage.getItem(sentKey) || '[]') : [];
   var bridgeWindow = null;
   var bridgeOrigin = '';
@@ -34,8 +36,8 @@
       '<p class="review-intro">Choose a page element or select text to tell us what should change.</p>' +
       '<div class="review-connect"><label for="review-code">Review access code</label><div class="review-code-row"><input id="review-code" type="password" autocomplete="off" placeholder="Enter code"><button type="button" class="review-load">Connect</button></div></div>' +
       '<button type="button" class="review-pick">Choose a spot on the page</button>' +
-      '<button type="button" class="review-edit-pick">Edit page content</button>' +
-      '<form class="review-edit-form" hidden><div class="review-target review-edit-target"></div><label for="review-edit-value">Replacement content</label><textarea id="review-edit-value" rows="5" maxlength="5000" required></textarea><p class="review-edit-help">Publishing changes the review site for everyone. Text edits replace the selected element’s text.</p><div class="review-form-actions"><button type="button" class="review-edit-cancel">Cancel</button><button type="submit" class="review-submit">Publish change</button></div></form>' +
+      '<button type="button" class="review-edit-pick">Edit page text</button>' +
+      '<form class="review-edit-form" hidden><div class="review-target review-edit-target"></div><label for="review-edit-value">Replacement text</label><textarea id="review-edit-value" rows="5" maxlength="5000" required></textarea><p class="review-edit-help">Publishing changes this text on the review site for everyone. To request an image change, select the image and leave feedback.</p><div class="review-form-actions"><button type="button" class="review-edit-cancel">Cancel</button><button type="submit" class="review-submit">Publish change</button></div></form>' +
       '<form class="review-form" hidden>' +
         '<div class="review-target"></div>' +
         '<label for="review-comment">Your feedback</label><textarea id="review-comment" required rows="5" maxlength="4000" placeholder="What should change? Suggested wording is welcome."></textarea>' +
@@ -58,8 +60,12 @@
   var matchList = ui.querySelector('.review-matches');
   var noteList = ui.querySelector('.review-list');
   var codeInput = ui.querySelector('#review-code');
-  var submit = ui.querySelector('.review-submit');
+  var submit = form.querySelector('.review-submit');
   var editForm = ui.querySelector('.review-edit-form');
+  if (localPreview) {
+    editForm.querySelector('[type="submit"]').textContent = 'Save local preview';
+    editForm.querySelector('.review-edit-help').textContent = 'This text change is visible only in this browser. GitHub Pages will stay unchanged.';
+  }
   codeInput.value = code;
   if (googleScript) ui.querySelector('.review-connect').hidden = true;
   if (!api && !googleScript) {
@@ -71,6 +77,10 @@
   function setStatus(message, error) {
     status.textContent = message;
     status.classList.toggle('is-error', !!error);
+  }
+
+  function missingFeedback(error) {
+    return /(?:^|:\s*)Feedback was not found\.$/.test(String(error && error.message || ''));
   }
 
   if (googleScript) {
@@ -138,11 +148,6 @@
     try { target = document.querySelector(edit.selector); } catch (error) { return; }
     if (!target) return;
     if (edit.kind === 'text') target.textContent = edit.value;
-    if (edit.kind === 'image' && target.tagName === 'IMG') {
-      target.closest('picture')?.querySelectorAll('source').forEach(function (source) { source.removeAttribute('srcset'); });
-      target.removeAttribute('srcset');
-      target.src = edit.value;
-    }
   }
 
   async function loadPublishedContent() {
@@ -162,6 +167,17 @@
     localStorage.setItem(sentKey, JSON.stringify(notes));
     renderNotes();
   }
+
+  window.addEventListener('storage', function (event) {
+    if (event.key === sentKey && googleScript) {
+      try { notes = JSON.parse(event.newValue || '[]'); } catch (error) { return; }
+      renderNotes();
+    }
+    if (event.key === storageKey) {
+      try { drafts = JSON.parse(event.newValue || '[]'); } catch (error) { return; }
+      renderNotes();
+    }
+  });
 
   function setPanel(open) {
     panel.hidden = !open;
@@ -292,25 +308,31 @@
     var language = /english|french|kirundi|trilingual|3 languages/i.test(selected.label);
     ui.querySelector('#review-terms').value = language ? 'English, French, Kirundi' : (quote || selected.label).slice(0, 70);
     setPanel(true);
+    setStatus('');
     ui.querySelector('#review-comment').focus();
   }
 
   function beginEdit(el) {
     stopChoosing();
-    if (!googleScript) return setStatus('Publishing requires the Google Sheets connection.', true);
+    if (!googleScript && !localPreview) return setStatus('Publishing requires the Google Sheets connection.', true);
     if (el.tagName !== 'IMG' && !/^(H[1-6]|P|LI|FIGCAPTION|SPAN|STRONG|EM)$/.test(el.tagName)) {
       el = el.querySelector('h1,h2,h3,h4,p,li,figcaption,img');
     }
-    if (!el) return setStatus('Choose text or an image inside the section.', true);
-    if (el.tagName !== 'IMG' && el.querySelector('a,button,input')) {
+    if (!el) return setStatus('Choose text inside the section.', true);
+    if (el.tagName === 'IMG') {
+      beginForm(el.closest('figure') || el, '');
+      return setStatus('Describe the image change you want in your feedback.');
+    }
+    if (el.querySelector('a,button,input')) {
       return setStatus('This text contains a link or control. Choose a smaller text element.', true);
     }
-    editTarget = { page: page, selector: selectorFor(el), kind: el.tagName === 'IMG' ? 'image' : 'text' };
+    editTarget = { page: page, selector: selectorFor(el), kind: 'text' };
     form.hidden = true;
     editForm.hidden = false;
     ui.querySelector('.review-edit-target').textContent = page + ' · ' + (el.alt || el.textContent || '').trim().slice(0, 150);
-    ui.querySelector('#review-edit-value').value = editTarget.kind === 'image' ? el.src : el.textContent.trim();
+    ui.querySelector('#review-edit-value').value = el.textContent.trim();
     setPanel(true);
+    setStatus('');
     ui.querySelector('#review-edit-value').focus();
   }
 
@@ -336,7 +358,8 @@
       var item = document.createElement('article');
       item.className = 'review-note';
       var where = document.createElement('small');
-      where.textContent = note.anchors.map(function (a) { return a.page; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).join(', ');
+      var pages = note.anchors.map(function (a) { return a.page; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).join(', ');
+      where.textContent = pages + ' · ' + (note.anchors[0].label || 'Selected location');
       var body = document.createElement('p');
       body.textContent = note.message;
       item.append(where, body);
@@ -358,7 +381,8 @@
               var saved = googleScript ? await sendToGoogle(note) : (await request('POST', note)).review;
               if (googleScript) keepSent(saved);
               else notes.push(saved);
-              drafts.splice(drafts.indexOf(note), 1);
+              var draftIndex = drafts.findIndex(function (entry) { return entry.id === note.id; });
+              if (draftIndex !== -1) drafts.splice(draftIndex, 1);
               saveDrafts();
               setStatus('Draft sent.');
             } catch (error) { retry.disabled = false; setStatus(error.message, true); }
@@ -420,7 +444,12 @@
           if (note.pending) saveDrafts();
           else saveSentNotes();
           setStatus('Feedback updated.');
-        } catch (error) { save.disabled = false; setStatus(error.message, true); }
+        } catch (error) {
+          save.disabled = false;
+          setStatus(missingFeedback(error)
+            ? 'This feedback is no longer in the Sheet. Delete its browser copy or submit a new comment.'
+            : error.message, true);
+        }
       });
       editor.append(field, save, cancel);
       item.appendChild(editor);
@@ -435,12 +464,20 @@
       if (!window.confirm('Delete this feedback?')) return;
       remove.disabled = true;
       try {
-        if (!note.pending) await callGoogle('feedback-change', { change: { id: note.id, action: 'delete' } });
+        var alreadyRemoved = false;
+        if (!note.pending) {
+          try { await callGoogle('feedback-change', { change: { id: note.id, action: 'delete' } }); }
+          catch (error) {
+            if (!missingFeedback(error)) throw error;
+            alreadyRemoved = true;
+          }
+        }
         var list = note.pending ? drafts : notes;
-        list.splice(list.indexOf(note), 1);
+        var index = list.findIndex(function (entry) { return entry.id === note.id; });
+        if (index !== -1) list.splice(index, 1);
         if (note.pending) saveDrafts();
         else saveSentNotes();
-        setStatus('Feedback deleted.');
+        setStatus(alreadyRemoved ? 'This feedback was already gone from the Sheet. Its browser copy was removed.' : 'Feedback deleted.');
       } catch (error) { remove.disabled = false; setStatus(error.message, true); }
     });
     actions.append(edit, remove);
@@ -538,14 +575,20 @@
     if (!value) return;
     var button = editForm.querySelector('[type="submit"]');
     button.disabled = true;
-    setStatus('Publishing change…');
+    setStatus(localPreview ? 'Saving local preview…' : 'Publishing change…');
     try {
-      var published = await callGoogle('content-publish', { edit: Object.assign({ value: value }, editTarget) });
+      var published = Object.assign({ value: value }, editTarget);
+      if (localPreview) {
+        var localEdits = JSON.parse(localStorage.getItem(localContentKey) || '[]');
+        localEdits = localEdits.filter(function (edit) { return edit.page !== published.page || edit.selector !== published.selector; });
+        localEdits.push(published);
+        localStorage.setItem(localContentKey, JSON.stringify(localEdits));
+      } else published = await callGoogle('content-publish', { edit: published });
       applyPublishedEdit(published);
       editForm.hidden = true;
       editTarget = null;
-      setStatus('Published. Everyone viewing the review site will see this change.');
-    } catch (error) { setStatus('Could not publish: ' + error.message, true); }
+      setStatus(localPreview ? 'Saved in this browser for preview.' : 'Published. Everyone viewing the review site will see this change.');
+    } catch (error) { setStatus((localPreview ? 'Could not save preview: ' : 'Could not publish: ') + error.message, true); }
     finally { button.disabled = false; }
   });
 
@@ -632,6 +675,10 @@
 
   window.addEventListener('resize', renderNotes);
   window.addEventListener('load', renderNotes);
+  if (localPreview) {
+    try { JSON.parse(localStorage.getItem(localContentKey) || '[]').forEach(applyPublishedEdit); }
+    catch (error) { /* Ignore invalid local preview data. */ }
+  }
   renderNotes();
   var reviewParams = new URLSearchParams(location.search);
   var requestedSelector = reviewParams.get('reviewMatch');

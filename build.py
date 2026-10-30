@@ -14,6 +14,7 @@ import shutil
 import argparse
 import json
 import os
+import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -45,7 +46,7 @@ for page in sorted((SRC / "pages").glob("*.html")):
     if args.review:
         api_url = os.environ.get("REVIEW_API_URL", "").rstrip("/")
         google_script_url = os.environ.get("GOOGLE_SCRIPT_URL", "").strip()
-        version = os.environ.get("GITHUB_SHA", "")
+        version = os.environ.get("GITHUB_SHA") or hashlib.sha1((SRC / "review.js").read_bytes()).hexdigest()
         if api_url and not re.fullmatch(r"https://[A-Za-z0-9._:/-]+", api_url):
             parser.error("REVIEW_API_URL must be an HTTPS URL")
         if google_script_url and not re.fullmatch(r"https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec", google_script_url):

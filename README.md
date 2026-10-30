@@ -1,6 +1,10 @@
 # Discovery School Burundi — website
 
-A static, no-database website. Everything the browser needs is in `dist/`; that folder is what gets hosted.
+A static website built from `src/` into `dist/`. The temporary review build uses
+a private Google Sheet for feedback and published text changes.
+
+**Current handoff:** [docs/current-status.md](docs/current-status.md) describes
+what is running, how to test it, and the remaining work before the permanent site.
 
 ## Layout
 
@@ -22,13 +26,19 @@ dist/              the built site — do not edit by hand, it is overwritten by 
 
 The site is published free on GitHub Pages by `.github/workflows/pages.yml`: every push to `main` deploys `dist/`. One-time setup on GitHub: **Settings → Pages → Source: GitHub Actions**. The site then lives at `https://timmybirds.github.io/discovery-school/` (a custom domain such as discoveryschoolburundi.org can be added on the same settings page).
 
-The optional development feedback tool can save selected-section comments to a private Google Sheet. Setup and tracking are described in [docs/review-feedback.md](docs/review-feedback.md). The tool is included only in review builds and is absent from the production build.
+The GitHub Pages deployment currently runs the **review build** because its
+`GOOGLE_SCRIPT_URL` repository variable is set. Reviewers can submit feedback
+to a private Google Sheet and publish text changes on this temporary site.
+Setup and tracking are described in [docs/review-feedback.md](docs/review-feedback.md).
+The production build omits the review tool.
 
 ## Editing
 
 1. Change a page in `src/pages/` (or the header/footer in `src/layout.html`, or styles in `src/site.css`).
-2. Run `python3 build.py`.
-3. Upload `dist/`.
+2. Run `python3 build.py` for the production site, or `python3 build.py --review`
+   for a local review build. To connect the local review build to the Sheet,
+   set `GOOGLE_SCRIPT_URL` to the deployed Apps Script `/exec` URL when building.
+3. Commit and push to `main`; GitHub Actions builds and deploys `dist/`.
 
 Only Python 3 (already on macOS/Linux) is needed for `build.py`. `tools/images.py` also needs Pillow (`pip install pillow`) and is only run when photos change:
 

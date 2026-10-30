@@ -77,10 +77,16 @@ function changeFeedback(raw) {
   lock.waitLock(10000);
   try {
     const sheet = feedbackSheet_(SpreadsheetApp.openById(spreadsheetId));
-    if (sheet.getLastRow() < 2) throw new Error('Feedback was not found.');
+    if (sheet.getLastRow() < 2) {
+      if (action === 'delete') return { id: id, action: action, alreadyDeleted: true };
+      throw new Error('Feedback was not found.');
+    }
     const cell = sheet.getRange(2, 11, sheet.getLastRow() - 1, 1)
       .createTextFinder(id).matchEntireCell(true).findNext();
-    if (!cell) throw new Error('Feedback was not found.');
+    if (!cell) {
+      if (action === 'delete') return { id: id, action: action, alreadyDeleted: true };
+      throw new Error('Feedback was not found.');
+    }
     if (action === 'delete') sheet.deleteRow(cell.getRow());
     else sheet.getRange(cell.getRow(), 1).setValue(safeCell_(message));
     return { id: id, action: action, message: message };
@@ -105,11 +111,8 @@ function publishContent(raw) {
   const kind = String(raw.kind || '');
   const value = String(raw.value || '').trim();
   if (!/^[a-z0-9-]+\.html$/.test(page) || !selector || selector.length > 500 ||
-      !['text', 'image'].includes(kind) || !value || value.length > 5000) {
+      kind !== 'text' || !value || value.length > 5000) {
     throw new Error('Invalid content edit.');
-  }
-  if (kind === 'image' && !/^https:\/\/[^\s]+$/.test(value)) {
-    throw new Error('Image URL must start with https://');
   }
   const id = properties.getProperty('SPREADSHEET_ID');
   if (!id) throw new Error('The spreadsheet has not been set up.');

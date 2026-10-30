@@ -26,6 +26,7 @@
   var navigationKey = 'discovery-review-navigation-v1';
   var editorMode = false;
   var editTarget = null;
+  var editableText = 'main h1 span, main h2 span, main h3 span, main p span, main p strong, main p em, main figcaption, main .proof b, main .proof span, main .values-list b, main .values-list span';
 
   var ui = document.createElement('div');
   ui.id = 'review-ui';
@@ -312,19 +313,28 @@
     ui.querySelector('#review-comment').focus();
   }
 
+  function failEdit(message) {
+    editForm.hidden = true;
+    editTarget = null;
+    return setStatus(message, true);
+  }
+
   function beginEdit(el) {
     stopChoosing();
-    if (!googleScript && !localPreview) return setStatus('Publishing requires the Google Sheets connection.', true);
-    if (el.tagName !== 'IMG' && !/^(H[1-6]|P|LI|FIGCAPTION|SPAN|STRONG|EM)$/.test(el.tagName)) {
-      el = el.querySelector('h1,h2,h3,h4,p,li,figcaption,img');
-    }
-    if (!el) return setStatus('Choose text inside the section.', true);
+    if (!googleScript && !localPreview) return failEdit('Publishing requires the Google Sheets connection.');
+    if (el.tagName === 'FIGURE') el = el.querySelector('figcaption, img');
+    if (!el) return failEdit('Choose text inside the section.');
     if (el.tagName === 'IMG') {
+      editForm.hidden = true;
+      editTarget = null;
       beginForm(el.closest('figure') || el, '');
       return setStatus('Describe the image change you want in your feedback.');
     }
+    if (!/^(H[1-6]|P|LI|FIGCAPTION|SPAN|STRONG|EM|B)$/.test(el.tagName)) {
+      return failEdit('Click the exact line you want to change, not the whole section.');
+    }
     if (el.querySelector('a,button,input')) {
-      return setStatus('This text contains a link or control. Choose a smaller text element.', true);
+      return failEdit('This text contains a link or control. Choose a smaller text element.');
     }
     editTarget = { page: page, selector: selectorFor(el), kind: 'text' };
     form.hidden = true;
@@ -542,7 +552,7 @@
   });
   document.addEventListener('click', function (event) {
     if (!choosing) return;
-    var target = editorMode && event.target.closest('main h1 span, main h2 span, main h3 span, main p span, main p strong, main p em, main figcaption') || pageTarget(event);
+    var target = editorMode && event.target.closest(editableText) || pageTarget(event);
     if (!target) return;
     event.preventDefault();
     event.stopPropagation();
@@ -552,7 +562,7 @@
   }, true);
   document.addEventListener('keydown', function (event) {
     if (choosing && (event.key === 'Enter' || event.key === ' ') && event.target.closest('main')) {
-      var target = editorMode && event.target.closest('main h1 span, main h2 span, main h3 span, main p span, main p strong, main p em, main figcaption') || pageTarget(event);
+      var target = editorMode && event.target.closest(editableText) || pageTarget(event);
       if (target) {
         event.preventDefault();
         event.stopPropagation();

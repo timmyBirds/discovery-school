@@ -26,7 +26,7 @@
   var navigationKey = 'discovery-review-navigation-v1';
   var editorMode = false;
   var editTarget = null;
-  var editableText = 'main h1 span, main h2 span, main h3 span, main p span, main p strong, main p em, main figcaption, main .proof b, main .proof span, main .values-list b, main .values-list span';
+  var editableText = 'main h1 span, main h2 span, main h3 span, main p span, main p strong, main p em, main p b, main figcaption, main .proof b, main .proof span, main li b, main li strong, main li span';
 
   var ui = document.createElement('div');
   ui.id = 'review-ui';
@@ -200,7 +200,7 @@
   }
 
   function enableKeyboardTargets() {
-    document.querySelectorAll('main h1, main h2, main h3, main h4, main p, main li, main figure, main img, main article, main section').forEach(function (el) {
+    document.querySelectorAll('main h1, main h2, main h3, main h4, main p, main li, main td, main th, main figure, main img, main article, main section').forEach(function (el) {
       var tabindex = el.getAttribute('tabindex');
       if (tabindex === null) {
         focusTargets.push({ el: el, tabindex: tabindex });
@@ -211,7 +211,7 @@
 
   function pageTarget(event) {
     if (event.target.closest('#review-ui, .review-pin')) return null;
-    var el = event.target.closest('figure, img, h1, h2, h3, h4, p, li, article, section');
+    var el = event.target.closest('figure, img, h1, h2, h3, h4, p, li, td, th, article, section');
     if (el && el.tagName === 'IMG' && el.closest('figure')) el = el.closest('figure');
     return el && el.closest('main') ? el : null;
   }
@@ -330,7 +330,7 @@
       beginForm(el.closest('figure') || el, '');
       return setStatus('Describe the image change you want in your feedback.');
     }
-    if (!/^(H[1-6]|P|LI|FIGCAPTION|SPAN|STRONG|EM|B)$/.test(el.tagName)) {
+    if (!/^(H[1-6]|P|LI|TD|TH|FIGCAPTION|SPAN|STRONG|EM|B)$/.test(el.tagName)) {
       return failEdit('Click the exact line you want to change, not the whole section.');
     }
     if (el.querySelector('a,button,input')) {
@@ -342,7 +342,9 @@
     ui.querySelector('.review-edit-target').textContent = page + ' · ' + (el.alt || el.textContent || '').trim().slice(0, 150);
     ui.querySelector('#review-edit-value').value = el.textContent.trim();
     setPanel(true);
-    setStatus('');
+    setStatus(el.children.length
+      ? 'Publishing replaces this line as plain text, so bold or italic inside it will be lost.'
+      : '');
     ui.querySelector('#review-edit-value').focus();
   }
 

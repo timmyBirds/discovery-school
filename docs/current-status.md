@@ -50,13 +50,16 @@ feedback then remains in browser drafts.
 - The reviewer confirmed the local feedback delete fix works. It removes a
   stale browser item when the matching Sheet row was already deleted, even
   when the Apps Script error includes an `Error:` prefix.
-- The current repository copy of `google-feedback/Code.gs` also makes repeated
-  deletes harmless and rejects image content edits. **Apps Script deployments
-  are separate from GitHub:** these server changes are not live until someone
-  copies the updated script into Apps Script and deploys a new web app version.
-  The website UI already prevents image editing and handles the older delete
-  response. See [review-feedback.md](review-feedback.md) for the deployment
-  steps.
+- `google-feedback/Code.gs` also makes repeated deletes harmless and rejects
+  image content edits. These server changes are **live**: the repository copy
+  was deployed to the bound Apps Script project as **Version 5** on
+  2026-10-29. The deployment ID did not change, so the `GOOGLE_SCRIPT_URL`
+  repository variable still points at it and needed no update. The website UI
+  independently prevents image editing and still handles the older delete
+  response. **Apps Script deployments are separate from GitHub:** a later edit
+  to `Code.gs` in this repository is not live until it is pasted into the Apps
+  Script editor and a new web app version is deployed. See
+  [review-feedback.md](review-feedback.md) for the steps.
 - Before moving to the permanent site, review the Sheet, copy approved text
   into `src/pages/`, and remove the public review build by clearing
   `GOOGLE_SCRIPT_URL` (and `REVIEW_API_URL` if present) in repository variables.
